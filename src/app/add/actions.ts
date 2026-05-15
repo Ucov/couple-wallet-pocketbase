@@ -19,6 +19,7 @@ export async function addExpense(formData: FormData) {
   const amount = parseFloat(formData.get('amount') as string)
   const concept = formData.get('concept') as string
   const category_id = formData.get('category_id') as string
+  const dateStr = formData.get('date') as string
 
   if (!amount || !concept) {
     redirect('/add?message=Faltan campos obligatorios')
@@ -34,7 +35,7 @@ export async function addExpense(formData: FormData) {
     category_id: category_id || null,
     paid_by: user.id,
     couple_id: profile.couple_id,
-    date: new Date().toISOString(),
+    date: dateStr ? new Date(dateStr).toISOString() : new Date().toISOString(),
   })
 
   if (error) {

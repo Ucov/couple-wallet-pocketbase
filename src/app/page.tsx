@@ -1,11 +1,22 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { PlusCircle, LogOut, Users } from 'lucide-react'
+import { PlusCircle, LogOut, RefreshCw, Trash2, Pencil, ChevronLeft, ChevronRight } from 'lucide-react'
 import { logout } from './login/actions'
+import { deleteExpense } from './expense-actions'
+import { revalidatePath } from 'next/cache'
 
-export default async function Dashboard() {
+// Forzamos que la página sea siempre dinámica y no se guarde en caché
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+export default async function Dashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string; year?: string }>
+}) {
   const supabase = await createClient()
+  const { month, year } = await searchParams
 
   // 1. Verificar auth
   const { data: { user } } = await supabase.auth.getUser()
@@ -13,81 +24,99 @@ export default async function Dashboard() {
     redirect('/login')
   }
 
-  // 2. Obtener perfil y datos de la pareja
+  // 2. Obtener perfil del usuario
   const { data: userProfile } = await supabase
     .from('profiles')
-    .select('couple_id, name, couples(name, join_code)')
+    .select('couple_id, display_name, name')
     .eq('id', user.id)
     .single()
 
-  // Si no tiene pareja, redirigir a la configuración
-  if (!userProfile?.couple_id) {
-    redirect('/setup-couple')
-  }
+  const myName = userProfile?.name || userProfile?.display_name || user.email?.split('@')[0] || 'Usuario'
 
-  const couple = userProfile.couples as any;
+  // 3. Manejo de fechas
+  const now = new Date()
+  const currentMonth = month ? parseInt(month) : now.getMonth()
+  const currentYear = year ? parseInt(year) : now.getFullYear()
+  
+  const startOfMonth = new Date(currentYear, currentMonth, 1)
+  const endOfMonth = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59)
 
-  // 3. Obtener gastos del mes actual de ESTA pareja
-  const startOfMonth = new Date()
-  startOfMonth.setDate(1)
-  startOfMonth.setHours(0, 0, 0, 0)
-
-  const { data: expenses } = await supabase
+  // 4. Obtener gastos del mes seleccionado
+  let expensesQuery = supabase
     .from('expenses')
     .select(`
-      id, amount, concept, date, paid_by,
-      categories ( name, icon, color ),
-      profiles ( name )
+      id, 
+      amount, 
+      concept, 
+      description, 
+      date, 
+      created_at, 
+      paid_by,
+      category_id,
+      categories ( name, icon, color )
     `)
-    .eq('couple_id', userProfile.couple_id)
     .gte('date', startOfMonth.toISOString())
+    .lte('date', endOfMonth.toISOString())
     .order('date', { ascending: false })
 
-  // 4. Obtener todos los perfiles de la pareja para los cálculos
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, name')
-    .eq('couple_id', userProfile.couple_id)
-  
-  // Cálculo de Deudas
-  let settlementMessage = "No hay gastos este mes."
+  if (userProfile?.couple_id) {
+    expensesQuery = expensesQuery.eq('couple_id', userProfile.couple_id)
+  } else {
+    expensesQuery = expensesQuery.eq('paid_by', user.id)
+  }
+
+  const { data: expenses } = await expensesQuery
+
+  // 5. Cálculos
   let myTotal = 0
   let partnerTotal = 0
-  const categoryTotals: Record<string, { amount: number, color: string }> = {}
-
-  if (profiles && expenses) {
-    expenses.forEach(exp => {
-      // Cálculo de totales personales
-      if (exp.paid_by === user.id) {
-        myTotal += Number(exp.amount)
-      } else {
-        partnerTotal += Number(exp.amount)
-      }
-
-      // Cálculo por categorías
-      const catName = exp.categories?.name || 'Otros'
-      const catColor = exp.categories?.color || '#6b7280'
-      if (!categoryTotals[catName]) {
-        categoryTotals[catName] = { amount: 0, color: catColor }
-      }
-      categoryTotals[catName].amount += Number(exp.amount)
-    })
-
-    if (profiles.length === 2) {
-      const diff = Math.abs(myTotal - partnerTotal)
-      const debt = diff / 2
-
-      if (myTotal > partnerTotal) {
-        settlementMessage = `Tu pareja te debe €${debt.toFixed(2)}`
-      } else if (partnerTotal > myTotal) {
-        settlementMessage = `Le debes €${debt.toFixed(2)} a tu pareja`
-      } else {
-        settlementMessage = "Estáis en paz. 🍻"
-      }
+  const categoryTotals: Record<string, { name: string; amount: number; color: string; icon: string }> = {}
+  
+  expenses?.forEach(exp => {
+    const amount = Number(exp.amount)
+    if (exp.paid_by === user.id) {
+      myTotal += amount
     } else {
-      settlementMessage = "Falta tu pareja. Comparte el código."
+      partnerTotal += amount
     }
+
+    const catId = exp.category_id || 'no-category'
+    if (!categoryTotals[catId]) {
+      categoryTotals[catId] = {
+        name: exp.categories?.name || 'Sin categoría',
+        amount: 0,
+        color: exp.categories?.color || '#6b7280',
+        icon: exp.categories?.icon || '💰'
+      }
+    }
+    categoryTotals[catId].amount += amount
+  })
+
+  const totalMonth = myTotal + partnerTotal
+  const sortedCategories = Object.values(categoryTotals).sort((a, b) => b.amount - a.amount)
+
+  let settlementMessage = 'Sin gastos este mes.'
+  if (userProfile?.couple_id) {
+    const diff = Math.abs(myTotal - partnerTotal)
+    const debt = diff / 2
+    if (myTotal > partnerTotal) {
+      settlementMessage = `Tu pareja te debe €${debt.toFixed(2)}`
+    } else if (partnerTotal > myTotal) {
+      settlementMessage = `Le debes €${debt.toFixed(2)} a tu pareja`
+    } else if (myTotal > 0) {
+      settlementMessage = 'Estáis en paz. 🍻'
+    }
+  } else {
+    settlementMessage = `Has gastado €${myTotal.toFixed(2)} este mes`
   }
+
+  // Navegación de meses
+  const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1
+  const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear
+  const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1
+  const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear
+
+  const monthName = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(startOfMonth)
 
   return (
     <main className="w-full max-w-md mx-auto p-4 flex flex-col min-h-screen">
@@ -95,7 +124,7 @@ export default async function Dashboard() {
         <div>
           <h1 className="text-2xl font-bold">CoupleWallet</h1>
           <p className="text-xs text-zinc-500 font-medium uppercase tracking-widest mt-1">
-            {couple.name} • Código: <span className="text-emerald-500 font-bold">{couple.join_code}</span>
+            Hola, {myName}
           </p>
         </div>
         <form action={logout}>
@@ -105,11 +134,22 @@ export default async function Dashboard() {
         </form>
       </header>
 
+      {/* Navegador de Mes */}
+      <div className="flex justify-between items-center mb-6 bg-zinc-900/50 p-2 rounded-xl border border-zinc-800">
+        <Link href={`/?month=${prevMonth}&year=${prevYear}`} className="p-2 text-zinc-400 hover:text-white">
+          <ChevronLeft size={20} />
+        </Link>
+        <span className="font-semibold text-zinc-200 capitalize">{monthName} {currentYear}</span>
+        <Link href={`/?month=${nextMonth}&year=${nextYear}`} className="p-2 text-zinc-400 hover:text-white">
+          <ChevronRight size={20} />
+        </Link>
+      </div>
+
       {/* Ajuste de Cuentas */}
-      <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-6 shadow-lg">
-        <h2 className="text-sm text-zinc-400 font-semibold mb-2 uppercase tracking-wider">Ajuste del Mes</h2>
+      <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-8 shadow-lg">
+        <h2 className="text-sm text-zinc-400 font-semibold mb-2 uppercase tracking-wider">Balance del Mes</h2>
         <p className="text-xl font-medium text-emerald-400 leading-snug">
-          {settlementMessage}
+          {!userProfile?.couple_id ? 'Falta tu pareja. Dile que se registre.' : settlementMessage}
         </p>
         <div className="flex justify-between mt-6 text-sm">
           <div className="flex flex-col">
@@ -124,17 +164,27 @@ export default async function Dashboard() {
       </section>
 
       {/* Resumen por Categorías */}
-      {Object.keys(categoryTotals).length > 0 && (
+      {sortedCategories.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-sm text-zinc-400 font-semibold mb-4 uppercase tracking-wider">Por Categorías</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {Object.entries(categoryTotals).map(([name, data]) => (
-              <div key={name} className="bg-zinc-900/30 border border-zinc-800/50 rounded-xl p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: data.color }}></div>
-                  <span className="text-xs text-zinc-400 font-medium truncate">{name}</span>
+          <h2 className="text-lg font-semibold text-zinc-100 mb-4">Gastos por Categoría</h2>
+          <div className="space-y-4">
+            {sortedCategories.map((cat) => (
+              <div key={cat.name}>
+                <div className="flex justify-between text-sm mb-1.5">
+                  <span className="text-zinc-300 flex items-center gap-2">
+                    <span className="text-lg">{cat.icon}</span> {cat.name}
+                  </span>
+                  <span className="font-medium text-zinc-100">€{cat.amount.toFixed(2)}</span>
                 </div>
-                <p className="text-lg font-bold text-zinc-100">€{data.amount.toFixed(2)}</p>
+                <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
+                  <div 
+                    className="h-full rounded-full transition-all duration-500" 
+                    style={{ 
+                      width: `${(cat.amount / totalMonth) * 100}%`,
+                      backgroundColor: cat.color 
+                    }}
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -144,38 +194,55 @@ export default async function Dashboard() {
       {/* Lista de Gastos */}
       <section className="flex-1">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-zinc-100">Gastos Recientes</h2>
+          <h2 className="text-lg font-semibold text-zinc-100">Gastos del Mes</h2>
         </div>
-        
+
         <div className="space-y-3 pb-24">
           {expenses?.map((expense: any) => (
             <div key={expense.id} className="bg-zinc-900/50 p-4 rounded-xl flex justify-between items-center border border-zinc-800/50">
-              <div>
-                <p className="font-medium text-zinc-200">{expense.concept}</p>
-                <div className="flex gap-2 text-xs text-zinc-500 mt-1">
-                  <span className="px-2 py-0.5 bg-zinc-800 rounded-full">{expense.categories?.name}</span>
-                  <span>• {new Date(expense.date).toLocaleDateString('es-ES')}</span>
+              <div className="flex gap-3 items-center">
+                <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-xl">
+                  {expense.categories?.icon || '💰'}
+                </div>
+                <div>
+                  <p className="font-medium text-zinc-200">{expense.concept}</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    {new Date(expense.date).toLocaleDateString('es-ES')} • {expense.categories?.name || 'General'}
+                  </p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="font-bold text-zinc-100">€{Number(expense.amount).toFixed(2)}</p>
-                <p className="text-xs text-zinc-500 mt-1">
-                  {expense.paid_by === user.id ? 'Tú' : (expense.profiles?.name || 'Pareja')}
-                </p>
+              <div className="text-right flex items-center gap-2">
+                <div className="mr-2">
+                  <p className="font-bold text-zinc-100">€{Number(expense.amount).toFixed(2)}</p>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    {expense.paid_by === user.id ? 'Tú' : 'Pareja'}
+                  </p>
+                </div>
+                <Link href={`/edit/${expense.id}`} className="text-zinc-600 hover:text-emerald-400 transition-colors p-1">
+                  <Pencil size={18} />
+                </Link>
+                <form action={deleteExpense.bind(null, expense.id)}>
+                  <button className="text-zinc-600 hover:text-red-400 transition-colors p-1">
+                    <Trash2 size={18} />
+                  </button>
+                </form>
               </div>
             </div>
           ))}
           {(!expenses || expenses.length === 0) && (
-            <p className="text-center text-zinc-500 py-8">No hay gastos todavía. ¡Añade el primero!</p>
+            <div className="text-center py-12 border-2 border-dashed border-zinc-800 rounded-2xl">
+              <p className="text-zinc-500">No hay gastos este mes.</p>
+              <p className="text-xs text-zinc-600 mt-1">¡Pulsa el botón + para añadir uno!</p>
+            </div>
           )}
         </div>
       </section>
 
       {/* Botón Flotante */}
       <div className="fixed bottom-6 left-0 right-0 flex justify-center pointer-events-none">
-        <Link 
-          href="/add" 
-          className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-full p-4 shadow-xl shadow-emerald-900/20 pointer-events-auto transition-transform hover:scale-105 active:scale-95"
+        <Link
+          href="/add"
+          className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-full p-4 shadow-xl shadow-emerald-900/20 pointer-events-auto transition-transform hover:scale-110 active:scale-95"
         >
           <PlusCircle size={32} />
         </Link>
