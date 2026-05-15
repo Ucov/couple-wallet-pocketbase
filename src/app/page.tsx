@@ -9,6 +9,12 @@ import { deleteExpense } from './expense-actions'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+interface Category {
+  name: string
+  icon: string
+  color: string
+}
+
 interface Expense {
   id: string
   amount: number
@@ -18,11 +24,7 @@ interface Expense {
   created_at: string
   paid_by: string
   category_id?: string
-  categories: {
-    name: string
-    icon: string
-    color: string
-  } | null
+  categories: Category | Category[] | null
 }
 
 export default async function Dashboard({
@@ -95,13 +97,15 @@ export default async function Dashboard({
       partnerTotal += amount
     }
 
+    const categories = exp.categories
+    const category = Array.isArray(categories) ? categories[0] : categories
     const catId = exp.category_id || 'no-category'
     if (!categoryTotals[catId]) {
       categoryTotals[catId] = {
-        name: exp.categories?.name || 'Sin categoría',
+        name: category?.name || 'Sin categoría',
         amount: 0,
-        color: exp.categories?.color || '#6b7280',
-        icon: exp.categories?.icon || '💰'
+        color: category?.color || '#6b7280',
+        icon: category?.icon || '💰'
       }
     }
     categoryTotals[catId].amount += amount
@@ -213,21 +217,24 @@ export default async function Dashboard({
         </div>
 
         <div className="space-y-3 pb-24">
-          {expenses?.map((expense: Expense) => (
-            <div key={expense.id} className="bg-zinc-900/50 p-4 rounded-xl flex justify-between items-center border border-zinc-800/50">
-              <div className="flex gap-3 items-center">
-                <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-xl">
-                  {expense.categories?.icon || '💰'}
+          {expenses?.map((expense: Expense) => {
+            const categories = expense.categories
+            const category = Array.isArray(categories) ? categories[0] : categories
+            return (
+              <div key={expense.id} className="bg-zinc-900/50 p-4 rounded-xl flex justify-between items-center border border-zinc-800/50">
+                <div className="flex gap-3 items-center">
+                  <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-xl">
+                    {category?.icon || '💰'}
+                  </div>
+                  <div>
+                    <p className="font-medium text-zinc-200">{expense.concept}</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      {new Date(expense.date).toLocaleDateString('es-ES')} • {category?.name || 'General'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-zinc-200">{expense.concept}</p>
-                  <p className="text-xs text-zinc-500 mt-0.5">
-                    {new Date(expense.date).toLocaleDateString('es-ES')} • {expense.categories?.name || 'General'}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right flex items-center gap-2">
-                <div className="mr-2">
+                <div className="text-right flex items-center gap-2">
+                  <div className="mr-2">
                   <p className="font-bold text-zinc-100">€{Number(expense.amount).toFixed(2)}</p>
                   <p className="text-xs text-zinc-400 mt-0.5">
                     {expense.paid_by === user.id ? 'Tú' : 'Pareja'}
