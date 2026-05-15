@@ -233,8 +233,8 @@ export default async function Dashboard({
                     </p>
                   </div>
                 </div>
-                <div className="text-right flex items-center gap-2">
-                  <div className="mr-2">
+              <div className="text-right flex items-center gap-2">
+                <div className="mr-2">
                   <p className="font-bold text-zinc-100">€{Number(expense.amount).toFixed(2)}</p>
                   <p className="text-xs text-zinc-400 mt-0.5">
                     {expense.paid_by === user.id ? 'Tú' : 'Pareja'}
@@ -250,7 +250,8 @@ export default async function Dashboard({
                 </form>
               </div>
             </div>
-          ))}
+          )
+        })}
           {(!expenses || expenses.length === 0) && (
             <div className="text-center py-12 border-2 border-dashed border-zinc-800 rounded-2xl">
               <p className="text-zinc-500">No hay gastos este mes.</p>
