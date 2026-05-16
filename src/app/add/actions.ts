@@ -25,16 +25,12 @@ export async function addExpense(formData: FormData) {
     redirect('/add?message=Faltan campos obligatorios')
   }
 
-  if (!profile?.couple_id) {
-    redirect('/add?message=Debes estar en una pareja para añadir gastos')
-  }
-
   const { error } = await supabase.from('expenses').insert({
     amount,
     concept,
     category_id: category_id || null,
     paid_by: user.id,
-    couple_id: profile.couple_id,
+    couple_id: profile?.couple_id || null,
     date: dateStr ? new Date(dateStr).toISOString() : new Date().toISOString(),
   })
 

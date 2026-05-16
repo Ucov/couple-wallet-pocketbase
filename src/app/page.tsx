@@ -1,9 +1,11 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { PlusCircle, LogOut, Trash2, Pencil, ChevronLeft, ChevronRight } from 'lucide-react'
+import { PlusCircle, LogOut, Trash2, Pencil, ChevronLeft, ChevronRight, Repeat, CheckCircle } from 'lucide-react'
 import { logout } from './login/actions'
 import { deleteExpense } from './expense-actions'
+import { applyRecurringExpenses } from './recurring-actions'
+import { settleMonth } from './settlement-actions'
 
 // Forzamos que la página sea siempre dinámica y no se guarde en caché
 export const dynamic = 'force-dynamic'
@@ -50,8 +52,18 @@ export default async function Dashboard({
 
   const myName = userProfile?.name || userProfile?.display_name || user.email?.split('@')[0] || 'Usuario'
 
-  // 3. Manejo de fechas
+  // 3. Manejo de fechas y gastos recurrentes
   const now = new Date()
+  
+  if (userProfile?.couple_id) {
+    // Aplicar gastos recurrentes del mes actual (si no se han aplicado ya)
+    try {
+      await applyRecurringExpenses(userProfile.couple_id, now.getMonth(), now.getFullYear(), false)
+    } catch (e) {
+      console.error('Error applying recurring expenses:', e)
+    }
+  }
+
   const currentMonth = month ? parseInt(month) : now.getMonth()
   const currentYear = year ? parseInt(year) : now.getFullYear()
   
@@ -114,16 +126,40 @@ export default async function Dashboard({
   const totalMonth = myTotal + partnerTotal
   const sortedCategories = Object.values(categoryTotals).sort((a, b) => b.amount - a.amount)
 
-  let settlementMessage = 'Sin gastos este mes.'
+  // 6. Verificar si el mes está saldado
+  let isSettled = false
   if (userProfile?.couple_id) {
-    const diff = Math.abs(myTotal - partnerTotal)
-    const debt = diff / 2
-    if (myTotal > partnerTotal) {
-      settlementMessage = `Tu pareja te debe €${debt.toFixed(2)}`
-    } else if (partnerTotal > myTotal) {
-      settlementMessage = `Le debes €${debt.toFixed(2)} a tu pareja`
-    } else if (myTotal > 0) {
-      settlementMessage = 'Estáis en paz. 🍻'
+    const { data: settlement } = await supabase
+      .from('settlements')
+      .select('id')
+      .eq('couple_id', userProfile.couple_id)
+      .eq('month', currentMonth)
+      .eq('year', currentYear)
+      .maybeSingle()
+    
+    if (settlement) {
+      isSettled = true
+    }
+  }
+
+  let settlementMessage = 'Sin gastos este mes.'
+  let showSettleButton = false
+
+  if (userProfile?.couple_id) {
+    if (isSettled) {
+      settlementMessage = 'Mes saldado. Todo al día. ✅'
+    } else {
+      const diff = Math.abs(myTotal - partnerTotal)
+      const debt = diff / 2
+      if (myTotal > partnerTotal) {
+        settlementMessage = `Tu pareja te debe €${debt.toFixed(2)}`
+        showSettleButton = debt > 0
+      } else if (partnerTotal > myTotal) {
+        settlementMessage = `Le debes €${debt.toFixed(2)} a tu pareja`
+        showSettleButton = debt > 0
+      } else if (myTotal > 0) {
+        settlementMessage = 'Estáis en paz. 🍻'
+      }
     }
   } else {
     settlementMessage = `Has gastado €${myTotal.toFixed(2)} este mes`
@@ -146,11 +182,16 @@ export default async function Dashboard({
             Hola, {myName}
           </p>
         </div>
-        <form action={logout}>
-          <button className="text-zinc-400 hover:text-white transition-colors">
-            <LogOut size={20} />
-          </button>
-        </form>
+        <div className="flex items-center gap-4">
+          <Link href="/recurring" className="text-zinc-400 hover:text-emerald-400 transition-colors" title="Gastos Fijos">
+            <Repeat size={20} />
+          </Link>
+          <form action={logout}>
+            <button className="text-zinc-400 hover:text-white transition-colors" title="Cerrar sesión">
+              <LogOut size={20} />
+            </button>
+          </form>
+        </div>
       </header>
 
       {/* Navegador de Mes */}
@@ -166,18 +207,30 @@ export default async function Dashboard({
 
       {/* Ajuste de Cuentas */}
       <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-8 shadow-lg">
-        <h2 className="text-sm text-zinc-400 font-semibold mb-2 uppercase tracking-wider">Balance del Mes</h2>
+        <div className="flex justify-between items-start mb-2">
+          <h2 className="text-sm text-zinc-400 font-semibold uppercase tracking-wider">Balance del Mes</h2>
+          {showSettleButton && userProfile?.couple_id && (
+            <form action={settleMonth.bind(null, userProfile.couple_id, currentMonth, currentYear)}>
+              <button 
+                type="submit" 
+                className="text-xs font-semibold bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg hover:bg-emerald-600/30 transition-colors flex items-center gap-1.5"
+              >
+                <CheckCircle size={14} /> Saldar Mes
+              </button>
+            </form>
+          )}
+        </div>
         <p className="text-xl font-medium text-emerald-400 leading-snug">
           {!userProfile?.couple_id ? 'Falta tu pareja. Dile que se registre.' : settlementMessage}
         </p>
         <div className="flex justify-between mt-6 text-sm">
           <div className="flex flex-col">
             <span className="text-zinc-500">Tú has pagado</span>
-            <span className="text-lg font-semibold text-zinc-200">€{myTotal.toFixed(2)}</span>
+            <span className={`text-lg font-semibold ${isSettled ? 'text-zinc-400' : 'text-zinc-200'}`}>€{myTotal.toFixed(2)}</span>
           </div>
           <div className="flex flex-col text-right">
             <span className="text-zinc-500">Tu pareja pagó</span>
-            <span className="text-lg font-semibold text-zinc-200">€{partnerTotal.toFixed(2)}</span>
+            <span className={`text-lg font-semibold ${isSettled ? 'text-zinc-400' : 'text-zinc-200'}`}>€{partnerTotal.toFixed(2)}</span>
           </div>
         </div>
       </section>
