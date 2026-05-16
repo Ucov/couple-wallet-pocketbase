@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
-import EditExpenseForm from '../../EditExpenseForm'
+import EditExpenseForm from '@/components/EditExpenseForm'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'

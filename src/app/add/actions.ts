@@ -37,6 +37,15 @@ export async function addExpense(formData: FormData) {
 
   const { amount, concept, category_id, date, paid_by_me } = validatedFields.data
 
+  // Validar que la fecha no sea futura
+  const selectedDate = new Date(date)
+  const today = new Date()
+  today.setHours(23, 59, 59, 999)
+
+  if (selectedDate > today) {
+    redirect('/add?message=La fecha no puede ser futura')
+  }
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('couple_id')
@@ -59,15 +68,6 @@ export async function addExpense(formData: FormData) {
     } else {
       redirect(`/add?message=${encodeURIComponent('No se encontró a tu pareja')}`)
     }
-  }
-
-  // Validar que la fecha no sea futura
-  const selectedDate = new Date(dateStr)
-  const today = new Date()
-  today.setHours(23, 59, 59, 999)
-
-  if (selectedDate > today) {
-    redirect('/add?message=La fecha no puede ser futura')
   }
 
   const { error } = await supabase.from('expenses').insert({

@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { updateExpenseAction, type ActionState } from './expense-actions'
+import { updateExpenseAction, type ActionState } from '@/app/expense-actions'
 
 const initialState: ActionState = { error: null }
 

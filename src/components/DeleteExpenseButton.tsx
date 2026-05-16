@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { Trash2 } from 'lucide-react'
-import { deleteExpenseAction, type ActionState } from './expense-actions'
+import { deleteExpenseAction, type ActionState } from '@/app/expense-actions'
 
 const initialState: ActionState = { error: null }
 

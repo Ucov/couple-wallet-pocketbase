@@ -10,6 +10,7 @@
 
 - [ ] Implementar el módulo "Ajuste de Cuentas" (Lógica Tricount/Splitwise) para calcular automáticamente el balance mensual y mostrar quién debe a quién.
 - [ ] Revisión final de Políticas de Seguridad RLS en Supabase para garantizar aislamiento total por núcleo familiar.
+- [ ] Auditoría de dependencias fantasma: revisar `sonner` y `zod` (introducidas por Gemini sin Plan mode previo). Por cada una: localizar usos en el código, decidir si se conservan justificadamente o se eliminan. Documentar la decisión en `CLAUDE.md` → `## Stack`.
 
 ### Fase 2: Gestión de la Convivencia Diaria
 

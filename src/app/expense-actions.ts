@@ -44,11 +44,15 @@ export async function deleteExpenseAction(
   return { error: null }
 }
 
-export async function updateExpense(id: string, formData: FormData): Promise<void> {
+export async function updateExpenseAction(
+  id: string,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  if (!user) return { error: 'No autenticado' }
 
   const rawData = {
     amount: parseFloat(formData.get('amount') as string),
@@ -60,8 +64,7 @@ export async function updateExpense(id: string, formData: FormData): Promise<voi
   const validatedFields = expenseSchema.safeParse(rawData)
 
   if (!validatedFields.success) {
-    const errorMsg = validatedFields.error.issues[0].message
-    redirect(`/edit/${id}?message=${encodeURIComponent(errorMsg)}`)
+    return { error: validatedFields.error.issues[0].message }
   }
 
   const { amount, concept, category_id, date } = validatedFields.data
@@ -77,7 +80,12 @@ export async function updateExpense(id: string, formData: FormData): Promise<voi
     .eq('id', id)
 
   if (error) {
-    redirect(`/edit/${id}?message=${encodeURIComponent(error.message)}`)
+    console.error('Error updating expense:', error)
+    return { 
+      error: error.code === 'PGRST116'
+        ? 'No se pudo actualizar el gasto (no existe o no tienes permiso)'
+        : error.message 
+    }
   }
 
   revalidatePath('/')
