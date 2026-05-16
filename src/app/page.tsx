@@ -1,9 +1,10 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { PlusCircle, LogOut, Trash2, Pencil, ChevronLeft, ChevronRight, Repeat, CheckCircle } from 'lucide-react'
+import { PlusCircle, LogOut, Pencil, ChevronLeft, ChevronRight, Repeat, CheckCircle } from 'lucide-react'
 import { logout } from './login/actions'
-import { deleteExpense } from './expense-actions'
+import DeleteExpenseButton from './DeleteExpenseButton'
+import CategoryDonutChart from './CategoryDonutChart'
 import { applyRecurringExpenses } from './recurring-actions'
 import { settleMonth } from './settlement-actions'
 
@@ -235,33 +236,8 @@ export default async function Dashboard({
         </div>
       </section>
 
-      {/* Resumen por Categorías */}
-      {sortedCategories.length > 0 && (
-        <section className="mb-8">
-          <h2 className="text-lg font-semibold text-zinc-100 mb-4">Gastos por Categoría</h2>
-          <div className="space-y-4">
-            {sortedCategories.map((cat) => (
-              <div key={cat.name}>
-                <div className="flex justify-between text-sm mb-1.5">
-                  <span className="text-zinc-300 flex items-center gap-2">
-                    <span className="text-lg">{cat.icon}</span> {cat.name}
-                  </span>
-                  <span className="font-medium text-zinc-100">€{cat.amount.toFixed(2)}</span>
-                </div>
-                <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
-                  <div 
-                    className="h-full rounded-full transition-all duration-500" 
-                    style={{ 
-                      width: `${(cat.amount / totalMonth) * 100}%`,
-                      backgroundColor: cat.color 
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Resumen por Categorías (donut) */}
+      <CategoryDonutChart categories={sortedCategories} total={totalMonth} />
 
       {/* Lista de Gastos */}
       <section className="flex-1">
@@ -296,11 +272,11 @@ export default async function Dashboard({
                 <Link href={`/edit/${expense.id}`} className="text-zinc-600 hover:text-emerald-400 transition-colors p-1">
                   <Pencil size={18} />
                 </Link>
-                <form action={deleteExpense.bind(null, expense.id)}>
-                  <button className="text-zinc-600 hover:text-red-400 transition-colors p-1">
-                    <Trash2 size={18} />
-                  </button>
-                </form>
+                <DeleteExpenseButton
+                  id={expense.id}
+                  concept={expense.concept}
+                  amount={Number(expense.amount)}
+                />
               </div>
             </div>
           )

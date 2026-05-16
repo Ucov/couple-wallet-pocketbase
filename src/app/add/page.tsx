@@ -52,6 +52,7 @@ export default async function AddExpensePage({
             type="date"
             name="date"
             defaultValue={new Date().toISOString().split('T')[0]}
+            max={new Date().toISOString().split('T')[0]}
             className="w-full bg-zinc-900 rounded-xl px-4 py-3 text-white border border-zinc-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
             required
           />
