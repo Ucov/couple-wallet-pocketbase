@@ -1,8 +1,9 @@
 import { createClient } from '@/utils/supabase/server'
-import { addRecurringExpense, deleteRecurringExpense } from '../recurring-actions'
+import { addRecurringExpense } from '../recurring-actions'
 import Link from 'next/link'
-import { ArrowLeft, Trash2, Repeat } from 'lucide-react'
+import { ArrowLeft, Repeat } from 'lucide-react'
 import { redirect } from 'next/navigation'
+import DeleteRecurringButton from '@/components/DeleteRecurringButton'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -89,11 +90,11 @@ export default async function RecurringExpensesPage() {
                         {expense.paid_by === user.id ? 'Tú' : 'Pareja'}
                       </p>
                     </div>
-                    <form action={deleteRecurringExpense.bind(null, expense.id)}>
-                      <button className="text-zinc-600 hover:text-red-400 transition-colors p-1" title="Eliminar">
-                        <Trash2 size={18} />
-                      </button>
-                    </form>
+                    <DeleteRecurringButton
+                      id={expense.id}
+                      concept={expense.concept}
+                      amount={Number(expense.amount)}
+                    />
                   </div>
                 </div>
               )
