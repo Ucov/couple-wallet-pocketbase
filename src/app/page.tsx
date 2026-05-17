@@ -234,9 +234,23 @@ export default async function Dashboard({
             </form>
           )}
         </div>
-        <p className="text-xl font-medium text-emerald-400 leading-snug">
-          {!userProfile?.couple_id ? 'Falta tu pareja. Dile que se registre.' : settlementMessage}
-        </p>
+        {!userProfile?.couple_id ? (
+          <div className="flex flex-col items-start gap-3 mt-1">
+            <p className="text-lg font-medium text-red-400 leading-snug">
+              Aún no tienes pareja vinculada.
+            </p>
+            <Link 
+              href="/setup-couple" 
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2 rounded-xl transition-colors text-sm"
+            >
+              Crear o unirse a un grupo
+            </Link>
+          </div>
+        ) : (
+          <p className="text-xl font-medium text-emerald-400 leading-snug">
+            {settlementMessage}
+          </p>
+        )}
         <div className="flex justify-between mt-6 text-sm">
           <div className="flex flex-col">
             <span className="text-zinc-500">Tú has pagado</span>
