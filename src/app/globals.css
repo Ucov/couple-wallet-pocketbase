@@ -1,26 +1,122 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ============================================================
+   THEME: CSS Custom Properties
+   Dark = por defecto (html.dark)
+   Light = html.light
+   ============================================================ */
+
+:root,
+html.dark {
+  color-scheme: dark;
+
+  --bg-base:       #09090b; /* zinc-950 */
+  --bg-card:       #18181b; /* zinc-900 */
+  --bg-card-50:    rgba(24, 24, 27, 0.5);
+  --bg-elevated:   #27272a; /* zinc-800 */
+  --border:        #27272a; /* zinc-800 */
+  --border-50:     rgba(39, 39, 42, 0.5);
+  --text-primary:  #fafafa; /* zinc-50 */
+  --text-high:     #f4f4f5; /* zinc-100 */
+  --text-mid:      #e4e4e7; /* zinc-200 */
+  --text-muted:    #a1a1aa; /* zinc-400 */
+  --text-subtle:   #71717a; /* zinc-500 */
+  --text-dim:      #52525b; /* zinc-600 */
+  --input-bg:      #09090b; /* zinc-950 */
+}
+
+html.light {
+  color-scheme: light;
+
+  --bg-base:       #f9fafb; /* gray-50 */
+  --bg-card:       #ffffff;
+  --bg-card-50:    rgba(255, 255, 255, 0.8);
+  --bg-elevated:   #f3f4f6; /* gray-100 */
+  --border:        #e5e7eb; /* gray-200 */
+  --border-50:     rgba(209, 213, 219, 0.5);
+  --text-primary:  #111827; /* gray-900 */
+  --text-high:     #1f2937; /* gray-800 */
+  --text-mid:      #374151; /* gray-700 */
+  --text-muted:    #6b7280; /* gray-500 */
+  --text-subtle:   #6b7280; /* gray-500 */
+  --text-dim:      #4b5563; /* gray-600 */
+  --input-bg:      #f9fafb;
+}
+
+/* ============================================================
+   BASE OVERRIDES — remap Tailwind zinc classes to CSS vars
+   ============================================================ */
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-geist-sans, Arial, Helvetica, sans-serif);
+}
+
+/* Backgrounds */
+html.light .bg-zinc-950 { background-color: var(--bg-base)  !important; }
+html.light .bg-zinc-900 { background-color: var(--bg-card)  !important; }
+html.light .bg-zinc-800 { background-color: var(--bg-elevated) !important; }
+
+/* Tailwind slash-opacity variants (JIT compiled names) */
+html.light [class*="bg-zinc-900/"] { background-color: var(--bg-card-50) !important; }
+html.light [class*="bg-zinc-800/"] { background-color: rgba(243,244,246,0.5) !important; }
+
+/* Borders */
+html.light [class*="border-zinc-800"] { border-color: var(--border) !important; }
+html.light [class*="border-zinc-700"] { border-color: #d1d5db !important; }
+html.light [class*="border-dashed"]   { border-color: #d1d5db !important; }
+
+/* Text */
+html.light .text-zinc-50  { color: var(--text-primary) !important; }
+html.light .text-zinc-100 { color: var(--text-high)    !important; }
+html.light .text-zinc-200 { color: var(--text-mid)     !important; }
+html.light .text-zinc-400 { color: var(--text-muted)   !important; }
+html.light .text-zinc-500 { color: var(--text-subtle)  !important; }
+html.light .text-zinc-600 { color: var(--text-dim)     !important; }
+
+/* Placeholders */
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Inputs & selects */
+html.light input,
+html.light select,
+html.light textarea {
+  background-color: var(--input-bg) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+}
+
+html.light .bg-zinc-950[class*="rounded"] { background-color: var(--input-bg) !important; }
+
+/* Special tinted backgrounds used in stat cards */
+html.light [class*="bg-emerald-950"]   { background-color: #d1fae5 !important; }
+html.light [class*="bg-red-950"]       { background-color: #fee2e2 !important; }
+html.light [class*="bg-blue-950"]      { background-color: #dbeafe !important; }
+
+/* ThemeToggle button specific in light mode */
+html.light .bg-zinc-800 {
+  background-color: #e5e7eb !important;
+}
+html.light .hover\:bg-zinc-700:hover {
+  background-color: #d1d5db !important;
+}
+html.light .text-zinc-400 {
+  color: #4b5563 !important;
+}
+
+/* Setup page gradient card */
+html.light [class*="bg-zinc-900"][class*="border"] {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border) !important;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg-base);
+  --color-foreground: var(--text-primary);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }

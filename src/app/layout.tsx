@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from 'sonner';
+import ThemeProvider from "@/components/ThemeProvider";
+import ThemeToggle from "@/components/ThemeToggle";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -51,10 +53,17 @@ export default function RootLayout({
     <html
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-50 items-center">
-        {children}
-        <Toaster theme="dark" position="bottom-center" />
+      <body className="min-h-full flex flex-col bg-[var(--bg-base)] text-[var(--text-primary)] items-center">
+        <ThemeProvider>
+          {/* ThemeToggle fijo en la esquina superior derecha — visible en todas las pantallas */}
+          <div className="fixed top-4 right-4 z-50">
+            <ThemeToggle />
+          </div>
+          {children}
+          <Toaster theme="dark" position="bottom-center" />
+        </ThemeProvider>
       </body>
     </html>
   );
