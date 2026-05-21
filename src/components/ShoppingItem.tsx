@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useTransition, useState, useEffect } from 'react'
 import { toggleShoppingItem, deleteShoppingItem } from '@/app/shopping/actions'
 import { CheckCircle2, Circle, Trash2, RotateCcw } from 'lucide-react'
 
@@ -12,16 +12,29 @@ interface ShoppingItemProps {
 
 export default function ShoppingItem({ id, name, status }: ShoppingItemProps) {
   const [isPending, startTransition] = useTransition()
-  const isBought = status === 'bought'
+  const [localStatus, setLocalStatus] = useState(status)
+
+  // Sincronizar estado local si el servidor cambia (ej. por Realtime)
+  useEffect(() => {
+    setLocalStatus(status)
+  }, [status])
+
+  const isBought = localStatus === 'bought'
 
   const handleToggle = () => {
-    startTransition(() => {
-      toggleShoppingItem(id, status)
-    })
+    const nextStatus = isBought ? 'pending' : 'bought'
+    setLocalStatus(nextStatus)
+    
+    // Pequeño retraso para ver la animación de tachado antes de mandarlo al servidor
+    setTimeout(() => {
+      startTransition(() => {
+        toggleShoppingItem(id, status)
+      })
+    }, 400)
   }
 
   const handleDelete = () => {
-    if (confirm('¿Eliminar este artículo del historial definitivamente?')) {
+    if (window.confirm('¿Eliminar este artículo del historial definitivamente?')) {
       startTransition(() => {
         deleteShoppingItem(id)
       })
@@ -29,20 +42,20 @@ export default function ShoppingItem({ id, name, status }: ShoppingItemProps) {
   }
 
   return (
-    <div className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+    <div className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-300 ${
       isBought 
-        ? 'bg-zinc-900/40 border-zinc-800/40 opacity-70' 
+        ? 'bg-zinc-900/40 border-zinc-800/40 opacity-60 scale-[0.98]' 
         : 'bg-zinc-900 border-zinc-800 shadow-sm'
-    } ${isPending ? 'opacity-50 pointer-events-none' : ''}`}>
+    } ${isPending ? 'opacity-30 pointer-events-none' : ''}`}>
       
       <button 
         onClick={handleToggle}
         className="flex items-center gap-4 flex-1 text-left"
       >
-        <div className={`transition-colors ${isBought ? 'text-emerald-500/50' : 'text-zinc-400'}`}>
+        <div className={`transition-all duration-300 ${isBought ? 'text-emerald-500 scale-110' : 'text-zinc-400 hover:scale-110'}`}>
           {isBought ? <CheckCircle2 size={24} /> : <Circle size={24} />}
         </div>
-        <span className={`text-lg font-medium transition-all ${
+        <span className={`text-lg font-medium transition-all duration-300 ${
           isBought ? 'text-zinc-500 line-through' : 'text-zinc-200'
         }`}>
           {name}
@@ -50,7 +63,7 @@ export default function ShoppingItem({ id, name, status }: ShoppingItemProps) {
       </button>
 
       {isBought && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-300">
           <button 
             onClick={handleToggle}
             className="p-2 text-zinc-500 hover:text-emerald-400 transition-colors"
