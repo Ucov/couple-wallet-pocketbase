@@ -33,10 +33,7 @@ export default async function ProfilePage() {
 
   return (
     <main className="w-full max-w-md mx-auto p-4 flex flex-col min-h-screen">
-      <header className="flex items-center gap-4 py-6 mb-2">
-        <Link href="/" className="text-zinc-400 hover:text-white transition-colors">
-          <ArrowLeft size={24} />
-        </Link>
+      <header className="flex items-center justify-between py-6 mb-2">
         <h1 className="text-2xl font-bold">Perfil y Seguridad</h1>
       </header>
       

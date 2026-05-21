@@ -211,9 +211,6 @@ export default async function Dashboard({
           <Link href="/recurring" className="text-zinc-400 hover:text-emerald-400 transition-colors" title="Gastos Fijos">
             <Repeat size={20} />
           </Link>
-          <Link href="/profile" className="text-zinc-400 hover:text-emerald-400 transition-colors" title="Perfil">
-            <UserCog size={20} />
-          </Link>
           <form action={logout}>
             <button className="text-zinc-400 hover:text-red-400 transition-colors" title="Cerrar sesión">
               <LogOut size={20} />
@@ -332,7 +329,7 @@ export default async function Dashboard({
       </section>
 
       {/* Botón Flotante */}
-      <div className="fixed bottom-6 left-0 right-0 flex justify-center pointer-events-none">
+      <div className="fixed bottom-24 left-0 right-0 flex justify-center pointer-events-none z-40">
         <Link
           href="/add"
           className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-full p-4 shadow-xl shadow-emerald-900/20 pointer-events-auto transition-transform hover:scale-110 active:scale-95"
