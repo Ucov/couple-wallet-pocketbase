@@ -2,7 +2,7 @@
 
 import { useTransition, useState, useEffect } from 'react'
 import { toggleShoppingItem, deleteShoppingItem } from '@/app/shopping/actions'
-import { CheckCircle2, Circle, Trash2, RotateCcw } from 'lucide-react'
+import { X } from 'lucide-react'
 
 interface ShoppingItemProps {
   id: string
@@ -33,7 +33,8 @@ export default function ShoppingItem({ id, name, status }: ShoppingItemProps) {
     }, 400)
   }
 
-  const handleDelete = () => {
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent toggling when clicking delete
     if (window.confirm('¿Eliminar este artículo del historial definitivamente?')) {
       startTransition(() => {
         deleteShoppingItem(id)
@@ -42,43 +43,28 @@ export default function ShoppingItem({ id, name, status }: ShoppingItemProps) {
   }
 
   return (
-    <div className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-300 ${
-      isBought 
-        ? 'bg-zinc-900/40 border-zinc-800/40 opacity-60 scale-[0.98]' 
-        : 'bg-zinc-900 border-zinc-800 shadow-sm'
-    } ${isPending ? 'opacity-30 pointer-events-none' : ''}`}>
-      
-      <button 
-        onClick={handleToggle}
-        className="flex items-center gap-4 flex-1 text-left"
-      >
-        <div className={`transition-all duration-300 ${isBought ? 'text-emerald-500 scale-110' : 'text-zinc-400 hover:scale-110'}`}>
-          {isBought ? <CheckCircle2 size={24} /> : <Circle size={24} />}
-        </div>
-        <span className={`text-lg font-medium transition-all duration-300 ${
-          isBought ? 'text-zinc-500 line-through' : 'text-zinc-200'
-        }`}>
-          {name}
-        </span>
-      </button>
+    <div 
+      className={`relative group inline-flex items-center justify-center px-4 py-3 rounded-2xl transition-all duration-300 shadow-sm cursor-pointer active:scale-95 select-none ${
+        isBought 
+          ? 'bg-zinc-900 border border-zinc-800/80 opacity-70' 
+          : 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-500'
+      } ${isPending ? 'opacity-40 pointer-events-none' : ''}`}
+      onClick={handleToggle}
+    >
+      <span className={`text-[15px] font-semibold transition-all duration-300 ${
+        isBought ? 'text-zinc-500 line-through' : 'text-white'
+      }`}>
+        {name}
+      </span>
 
       {isBought && (
-        <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-300">
-          <button 
-            onClick={handleToggle}
-            className="p-2 text-zinc-500 hover:text-emerald-400 transition-colors"
-            title="Volver a añadir"
-          >
-            <RotateCcw size={18} />
-          </button>
-          <button 
-            onClick={handleDelete}
-            className="p-2 text-zinc-500 hover:text-red-400 transition-colors"
-            title="Eliminar del historial"
-          >
-            <Trash2 size={18} />
-          </button>
-        </div>
+        <button 
+          onClick={handleDelete}
+          className="absolute -top-2 -right-2 bg-zinc-800 text-zinc-400 hover:bg-red-950/80 hover:text-red-400 p-1.5 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all border border-zinc-700/50"
+          title="Eliminar del historial"
+        >
+          <X size={12} strokeWidth={3} />
+        </button>
       )}
     </div>
   )

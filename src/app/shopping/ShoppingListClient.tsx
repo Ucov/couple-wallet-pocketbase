@@ -64,7 +64,7 @@ export default function ShoppingListClient({ initialItems, coupleId }: { initial
             <p className="text-sm text-zinc-500 mt-1">No hay nada que comprar por ahora.</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-2">
             {pendingItems.map(item => (
               <ShoppingItem key={item.id} id={item.id} name={item.name} status={item.status as 'pending'} />
             ))}
@@ -78,7 +78,7 @@ export default function ShoppingListClient({ initialItems, coupleId }: { initial
           <h2 className="text-sm text-zinc-600 font-semibold uppercase tracking-wider mb-4">
             Comprados recientemente
           </h2>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-2">
             {boughtItems.map(item => (
               <ShoppingItem key={item.id} id={item.id} name={item.name} status={item.status as 'bought'} />
             ))}

@@ -13,7 +13,7 @@ export default function BottomNav() {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-t border-zinc-800/80 pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-zinc-950/80 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-md mx-auto px-6 h-16 flex items-center justify-between">
         <Link 
           href="/"
