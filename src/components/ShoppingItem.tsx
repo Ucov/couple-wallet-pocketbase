@@ -25,12 +25,9 @@ export default function ShoppingItem({ id, name, status }: ShoppingItemProps) {
     const nextStatus = isBought ? 'pending' : 'bought'
     setLocalStatus(nextStatus)
     
-    // Pequeño retraso para ver la animación de tachado antes de mandarlo al servidor
-    setTimeout(() => {
-      startTransition(() => {
-        toggleShoppingItem(id, status)
-      })
-    }, 400)
+    startTransition(() => {
+      toggleShoppingItem(id, status)
+    })
   }
 
   const handleDelete = (e: React.MouseEvent) => {

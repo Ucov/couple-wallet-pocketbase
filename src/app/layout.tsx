@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import ThemeProvider from "@/components/ThemeProvider";
 import ThemeToggle from "@/components/ThemeToggle";
 import BottomNav from "@/components/BottomNav";
+import SwipeNavigation from "@/components/SwipeNavigation";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -62,6 +63,7 @@ export default function RootLayout({
           <div className="fixed top-4 right-4 z-50">
             <ThemeToggle />
           </div>
+          <SwipeNavigation />
           {children}
           <BottomNav />
           <Toaster theme="dark" position="bottom-center" toastOptions={{ className: 'mb-16' }} />

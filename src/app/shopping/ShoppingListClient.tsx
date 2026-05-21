@@ -27,8 +27,14 @@ export default function ShoppingListClient({ initialItems, coupleId }: { initial
           table: 'shopping_items',
           filter: `couple_id=eq.${coupleId}`,
         },
-        () => {
-          // Trigger a Server Component refresh so we fetch the freshest data
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setItems(prev => [payload.new, ...prev.filter(i => i.id !== payload.new.id)])
+          } else if (payload.eventType === 'UPDATE') {
+            setItems(prev => prev.map(i => i.id === payload.new.id ? payload.new : i))
+          } else if (payload.eventType === 'DELETE') {
+            setItems(prev => prev.filter(i => i.id !== payload.old.id))
+          }
           router.refresh()
         }
       )

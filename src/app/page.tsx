@@ -7,6 +7,7 @@ import DeleteExpenseButton from '@/components/DeleteExpenseButton'
 import CategoryDonutChart from '@/components/CategoryDonutChart'
 import { applyRecurringExpenses } from './recurring-actions'
 import { settleMonth } from './settlement-actions'
+import MonthNavigator from '@/components/MonthNavigator'
 import { leaveCouple } from './setup-couple/actions'
 
 // Forzamos que la página sea siempre dinámica y no se guarde en caché
@@ -220,15 +221,7 @@ export default async function Dashboard({
       </header>
 
       {/* Navegador de Mes */}
-      <div className="flex justify-between items-center mb-6 bg-zinc-900/50 p-2 rounded-xl border border-zinc-800">
-        <Link href={`/?month=${prevMonth}&year=${prevYear}`} className="p-2 text-zinc-400 hover:text-white">
-          <ChevronLeft size={20} />
-        </Link>
-        <span className="font-semibold text-zinc-200 capitalize">{monthName} {currentYear}</span>
-        <Link href={`/?month=${nextMonth}&year=${nextYear}`} className="p-2 text-zinc-400 hover:text-white">
-          <ChevronRight size={20} />
-        </Link>
-      </div>
+      <MonthNavigator currentMonth={currentMonth} currentYear={currentYear} monthName={monthName} />
 
       {/* Ajuste de Cuentas */}
       <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-8 shadow-lg">
