@@ -3,6 +3,7 @@
 import { useTransition, useState, useEffect } from 'react'
 import { toggleShoppingItem, deleteShoppingItem } from '@/app/shopping/actions'
 import { X } from 'lucide-react'
+import { getGroceryIcon } from '@/utils/groceryIcons'
 
 interface ShoppingItemProps {
   id: string
@@ -39,16 +40,22 @@ export default function ShoppingItem({ id, name, status }: ShoppingItemProps) {
     }
   }
 
+  const Icon = getGroceryIcon(name)
+
   return (
     <div 
-      className={`relative group inline-flex items-center justify-center px-4 py-3 rounded-2xl transition-all duration-300 shadow-sm cursor-pointer active:scale-95 select-none ${
+      className={`relative group flex flex-col items-center justify-center p-4 min-w-[80px] rounded-2xl transition-all duration-300 shadow-sm cursor-pointer active:scale-95 select-none ${
         isBought 
-          ? 'bg-zinc-900 border border-zinc-800/80 opacity-70' 
-          : 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-500'
+          ? 'bg-zinc-900 border border-zinc-800/80 opacity-70 grayscale' 
+          : 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-500 shadow-emerald-900/20'
       } ${isPending ? 'opacity-40 pointer-events-none' : ''}`}
       onClick={handleToggle}
     >
-      <span className={`text-[15px] font-semibold transition-all duration-300 ${
+      <div className={`mb-2 transition-transform duration-300 ${isBought ? 'scale-90 opacity-50' : 'scale-100 drop-shadow-md'}`}>
+        <Icon size={28} className={isBought ? 'text-zinc-500' : 'text-white'} />
+      </div>
+
+      <span className={`text-[13px] font-semibold text-center leading-tight transition-all duration-300 ${
         isBought ? 'text-zinc-500 line-through' : 'text-white'
       }`}>
         {name}
