@@ -1,0 +1,64 @@
+import { createClient } from '@/utils/supabase/server'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
+import ProfileForm from './ProfileForm'
+import CopyCodeButton from './CopyCodeButton'
+import LeaveGroupButton from './LeaveGroupButton'
+
+export const dynamic = 'force-dynamic'
+
+export default async function ProfilePage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    redirect('/login')
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('name, couple_id')
+    .eq('id', user.id)
+    .single()
+    
+  let joinCode = null;
+  if (profile?.couple_id) {
+    const { data: couple } = await supabase
+      .from('couples')
+      .select('join_code')
+      .eq('id', profile.couple_id)
+      .single()
+    joinCode = couple?.join_code
+  }
+
+  return (
+    <main className="w-full max-w-md mx-auto p-4 flex flex-col min-h-screen">
+      <header className="flex items-center gap-4 py-6 mb-2">
+        <Link href="/" className="text-zinc-400 hover:text-white transition-colors">
+          <ArrowLeft size={24} />
+        </Link>
+        <h1 className="text-2xl font-bold">Perfil y Seguridad</h1>
+      </header>
+      
+      <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-6 shadow-lg">
+        <h2 className="text-sm text-zinc-400 font-semibold uppercase tracking-wider mb-4">Ajustes Personales</h2>
+        <ProfileForm initialName={profile?.name || ''} />
+      </section>
+
+      {joinCode && (
+        <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-6 shadow-lg">
+          <h2 className="text-sm text-zinc-400 font-semibold uppercase tracking-wider mb-4">Código de Pareja</h2>
+          <p className="text-zinc-300 text-sm mb-4">Comparte este código con tu pareja si aún no se ha unido a tu grupo.</p>
+          <div className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl border border-zinc-800">
+            <span className="font-mono text-emerald-400 tracking-widest font-bold text-lg">{joinCode}</span>
+            <CopyCodeButton code={joinCode} />
+          </div>
+          
+          <div className="mt-8 pt-6 border-t border-zinc-800">
+            <LeaveGroupButton />
+          </div>
+        </section>
+      )}
+    </main>
+  )
+}

@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { PlusCircle, LogOut, Pencil, ChevronLeft, ChevronRight, Repeat, CheckCircle, UserX } from 'lucide-react'
+import { PlusCircle, LogOut, Pencil, ChevronLeft, ChevronRight, Repeat, CheckCircle, UserCog } from 'lucide-react'
 import { logout } from './login/actions'
 import DeleteExpenseButton from '@/components/DeleteExpenseButton'
 import CategoryDonutChart from '@/components/CategoryDonutChart'
@@ -58,21 +58,25 @@ export default async function Dashboard({
     console.error('Error fetching profile:', profileError)
   }
 
-  let joinCode = null;
-  if (userProfile?.couple_id) {
-    const { data: coupleData } = await supabase
-      .from('couples')
-      .select('join_code')
-      .eq('id', userProfile.couple_id)
-      .single()
-    
-    joinCode = coupleData?.join_code;
-  } else {
+  if (!userProfile?.couple_id) {
     // Sin grupo → llevar directamente a la pantalla de configuración
     redirect('/setup-couple')
   }
 
   const myName = userProfile?.name || user.email?.split('@')[0] || 'Usuario'
+  let partnerName = 'Pareja'
+  
+  // Obtener el nombre de la pareja
+  const { data: partnerData } = await supabase
+    .from('profiles')
+    .select('name')
+    .eq('couple_id', userProfile.couple_id)
+    .neq('id', user.id)
+    .maybeSingle()
+  
+  if (partnerData?.name) {
+    partnerName = partnerData.name;
+  }
 
   // 3. Manejo de fechas y gastos recurrentes
   const now = new Date()
@@ -173,10 +177,10 @@ export default async function Dashboard({
       const diff = Math.abs(myTotal - partnerTotal)
       const debt = diff / 2
       if (myTotal > partnerTotal) {
-        settlementMessage = `Tu pareja te debe €${debt.toFixed(2)}`
+        settlementMessage = `${partnerName} te debe €${debt.toFixed(2)}`
         showSettleButton = debt > 0
       } else if (partnerTotal > myTotal) {
-        settlementMessage = `Le debes €${debt.toFixed(2)} a tu pareja`
+        settlementMessage = `Le debes €${debt.toFixed(2)} a ${partnerName}`
         showSettleButton = debt > 0
       } else if (myTotal > 0) {
         settlementMessage = 'Estáis en paz. 🍻'
@@ -202,18 +206,16 @@ export default async function Dashboard({
           <p className="text-xs text-zinc-500 font-medium uppercase tracking-widest mt-1">
             Hola, {myName}
           </p>
-          {joinCode && (
-            <p className="text-xs text-emerald-500/80 font-medium mt-1 cursor-help" title="Comparte este código con tu pareja para que se una">
-              Código vinculación: <span className="font-mono text-emerald-400 bg-emerald-950/30 px-1.5 py-0.5 rounded">{joinCode}</span>
-            </p>
-          )}
         </div>
         <div className="flex items-center gap-4">
           <Link href="/recurring" className="text-zinc-400 hover:text-emerald-400 transition-colors" title="Gastos Fijos">
             <Repeat size={20} />
           </Link>
+          <Link href="/profile" className="text-zinc-400 hover:text-emerald-400 transition-colors" title="Perfil">
+            <UserCog size={20} />
+          </Link>
           <form action={logout}>
-            <button className="text-zinc-400 hover:text-white transition-colors" title="Cerrar sesión">
+            <button className="text-zinc-400 hover:text-red-400 transition-colors" title="Cerrar sesión">
               <LogOut size={20} />
             </button>
           </form>
@@ -269,20 +271,10 @@ export default async function Dashboard({
             <span className={`text-lg font-semibold ${isSettled ? 'text-zinc-400' : 'text-zinc-200'}`}>€{myTotal.toFixed(2)}</span>
           </div>
           <div className="flex flex-col text-right">
-            <span className="text-zinc-500">Tu pareja pagó</span>
+            <span className="text-zinc-500">{partnerName} pagó</span>
             <span className={`text-lg font-semibold ${isSettled ? 'text-zinc-400' : 'text-zinc-200'}`}>€{partnerTotal.toFixed(2)}</span>
           </div>
         </div>
-        {userProfile?.couple_id && (
-          <form action={leaveCouple} className="mt-4 pt-4 border-t border-zinc-800">
-            <button
-              type="submit"
-              className="w-full text-xs font-medium text-zinc-500 hover:text-red-400 transition-colors flex items-center justify-center gap-1.5 py-1"
-            >
-              <UserX size={13} /> Salir del grupo
-            </button>
-          </form>
-        )}
       </section>
 
       {/* Resumen por Categorías (donut) */}
@@ -315,7 +307,7 @@ export default async function Dashboard({
                 <div className="mr-2">
                   <p className="font-bold text-zinc-100">€{Number(expense.amount).toFixed(2)}</p>
                   <p className="text-xs text-zinc-400 mt-0.5">
-                    {expense.paid_by === user.id ? 'Tú' : 'Pareja'}
+                    {expense.paid_by === user.id ? 'Tú' : partnerName}
                   </p>
                 </div>
                 <Link href={`/edit/${expense.id}`} className="text-zinc-600 hover:text-emerald-400 transition-colors p-1">
