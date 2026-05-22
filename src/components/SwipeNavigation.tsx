@@ -16,7 +16,7 @@ export default function SwipeNavigation() {
     let touchStartY = 0
     let touchEndY = 0
 
-    const routes = ['/', '/shopping', '/calendar', '/profile']
+    const routes = ['/', '/shopping', '/chores', '/calendar', '/profile']
     const currentIndex = routes.indexOf(pathname)
 
     const handleTouchStart = (e: TouchEvent) => {
@@ -46,7 +46,7 @@ export default function SwipeNavigation() {
       // Ignorar si el scroll fue mayormente vertical
       if (Math.abs(deltaY) > Math.abs(deltaX)) return
 
-      const SWIPE_THRESHOLD = 75 // mínima distancia para considerar un swipe
+      const SWIPE_THRESHOLD = 50 // mínima distancia para considerar un swipe
 
       if (deltaX > SWIPE_THRESHOLD) {
         // Swipe Right -> Ir a la pantalla anterior

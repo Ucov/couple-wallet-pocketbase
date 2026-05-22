@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, ShoppingCart, UserCog, Calendar } from 'lucide-react'
+import { Home, ShoppingCart, CheckSquare, UserCog, Calendar } from 'lucide-react'
 
 export default function BottomNav() {
   const pathname = usePathname()
@@ -17,7 +17,7 @@ export default function BottomNav() {
       <div className="max-w-md mx-auto px-6 h-16 flex items-center justify-between">
         <Link 
           href="/"
-          className={`flex flex-col items-center justify-center w-16 h-14 mt-1 rounded-2xl space-y-1 transition-all ${
+          className={`flex flex-col items-center justify-center w-[60px] h-14 mt-1 rounded-2xl space-y-1 transition-all ${
             pathname === '/' ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 hover:text-zinc-300'
           }`}
         >
@@ -27,7 +27,7 @@ export default function BottomNav() {
         
         <Link 
           href="/shopping"
-          className={`flex flex-col items-center justify-center w-16 h-14 mt-1 rounded-2xl space-y-1 transition-all ${
+          className={`flex flex-col items-center justify-center w-[60px] h-14 mt-1 rounded-2xl space-y-1 transition-all ${
             pathname === '/shopping' || pathname?.startsWith('/shopping') ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 hover:text-zinc-300'
           }`}
         >
@@ -36,8 +36,18 @@ export default function BottomNav() {
         </Link>
 
         <Link 
+          href="/chores"
+          className={`flex flex-col items-center justify-center w-[60px] h-14 mt-1 rounded-2xl space-y-1 transition-all ${
+            pathname === '/chores' || pathname?.startsWith('/chores') ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 hover:text-zinc-300'
+          }`}
+        >
+          <CheckSquare size={22} className={pathname === '/chores' || pathname?.startsWith('/chores') ? 'fill-emerald-400/20' : ''} />
+          <span className="text-[10px] font-medium">Tareas</span>
+        </Link>
+
+        <Link 
           href="/calendar" 
-          className={`flex flex-col items-center justify-center w-16 h-14 rounded-2xl transition-all duration-300 ${
+          className={`flex flex-col items-center justify-center w-[60px] h-14 rounded-2xl transition-all duration-300 ${
             pathname.startsWith('/calendar')
               ? 'text-emerald-400 bg-emerald-500/10' 
               : 'text-zinc-500 hover:text-zinc-300'
@@ -53,7 +63,7 @@ export default function BottomNav() {
         
         <Link 
           href="/profile"
-          className={`flex flex-col items-center justify-center w-16 h-14 mt-1 rounded-2xl space-y-1 transition-all ${
+          className={`flex flex-col items-center justify-center w-[60px] h-14 mt-1 rounded-2xl space-y-1 transition-all ${
             pathname === '/profile' || pathname?.startsWith('/profile') ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 hover:text-zinc-300'
           }`}
         >
