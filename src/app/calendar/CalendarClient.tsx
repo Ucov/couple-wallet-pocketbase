@@ -120,7 +120,7 @@ export default function CalendarClient({ initialEvents, coupleId }: Props) {
       <div className="bg-zinc-950/50 shadow-sm">
         {viewMode === 'weekly' ? (
           // Vista Cinta Horizontal
-          <div className="flex overflow-x-auto gap-2 px-6 py-4 no-scrollbar">
+          <div className="no-swipe flex overflow-x-auto gap-2 px-6 py-4 no-scrollbar">
             {weeklyDays.map(day => {
               const isSelected = isSameDay(day, selectedDate)
               const hasEvents = initialEvents.some(ev => isSameDay(parseISO(ev.date), day))
@@ -150,7 +150,7 @@ export default function CalendarClient({ initialEvents, coupleId }: Props) {
           </div>
         ) : (
           // Vista Cuadrícula Mensual
-          <div className="px-6 py-4">
+          <div className="no-swipe px-6 py-4">
             <div className="grid grid-cols-7 gap-1 mb-2">
               {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day, i) => (
                 <div key={i} className="text-center text-xs font-semibold text-zinc-500 py-2">
