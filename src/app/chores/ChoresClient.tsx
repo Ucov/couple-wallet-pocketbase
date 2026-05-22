@@ -43,16 +43,16 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
       channel = supabase
         .channel(`chores_rt_${coupleId}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chores' },
-          (payload) => {
+          (payload: any) => {
             setChores(prev => {
               if (prev.some(i => i.id === payload.new.id)) return prev
               return [payload.new as Chore, ...prev]
             })
           })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chores' },
-          (payload) => { setChores(prev => prev.map(i => i.id === payload.new.id ? payload.new as Chore : i)) })
+          (payload: any) => { setChores(prev => prev.map(i => i.id === payload.new.id ? payload.new as Chore : i)) })
         .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'chores' },
-          (payload) => { setChores(prev => prev.filter(i => i.id !== payload.old.id)) })
+          (payload: any) => { setChores(prev => prev.filter(i => i.id !== payload.old.id)) })
         .subscribe()
     }
 

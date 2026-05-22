@@ -37,7 +37,7 @@ export default function ShoppingListClient({ initialItems, coupleId }: { initial
             schema: 'public',
             table: 'shopping_items',
           },
-          (payload) => {
+          (payload: any) => {
             console.log('[Realtime] INSERT shopping:', payload.new)
             setItems(prev => {
               if (prev.some(i => i.id === payload.new.id)) return prev
@@ -52,7 +52,7 @@ export default function ShoppingListClient({ initialItems, coupleId }: { initial
             schema: 'public',
             table: 'shopping_items',
           },
-          (payload) => {
+          (payload: any) => {
             console.log('[Realtime] UPDATE shopping:', payload.new)
             setItems(prev => prev.map(i => i.id === payload.new.id ? payload.new : i))
           }
@@ -64,12 +64,12 @@ export default function ShoppingListClient({ initialItems, coupleId }: { initial
             schema: 'public',
             table: 'shopping_items',
           },
-          (payload) => {
+          (payload: any) => {
             console.log('[Realtime] DELETE shopping:', payload.old)
             setItems(prev => prev.filter(i => i.id !== payload.old.id))
           }
         )
-        .subscribe((status, err) => {
+        .subscribe((status: string, err?: any) => {
           console.log('[Realtime] shopping status:', status)
           if (err) console.error('[Realtime] shopping error:', err)
         })
