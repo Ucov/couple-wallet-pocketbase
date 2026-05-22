@@ -20,11 +20,18 @@ export default function SwipeNavigation() {
     const currentIndex = routes.indexOf(pathname)
 
     const handleTouchStart = (e: TouchEvent) => {
+      const target = e.target as HTMLElement
+      if (target.closest('.no-swipe')) {
+        touchStartX = -1 // Usamos -1 como flag de ignorar
+        return
+      }
       touchStartX = e.changedTouches[0].screenX
       touchStartY = e.changedTouches[0].screenY
     }
 
     const handleTouchEnd = (e: TouchEvent) => {
+      if (touchStartX === -1) return
+      
       touchEndX = e.changedTouches[0].screenX
       touchEndY = e.changedTouches[0].screenY
       handleSwipe()

@@ -5,6 +5,7 @@ import ThemeProvider from "@/components/ThemeProvider";
 import ThemeToggle from "@/components/ThemeToggle";
 import BottomNav from "@/components/BottomNav";
 import SwipeNavigation from "@/components/SwipeNavigation";
+import PageTransition from "@/components/PageTransition";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -64,7 +65,9 @@ export default function RootLayout({
             <ThemeToggle />
           </div>
           <SwipeNavigation />
-          {children}
+          <PageTransition>
+            {children}
+          </PageTransition>
           <BottomNav />
           <Toaster theme="dark" position="bottom-center" toastOptions={{ className: 'mb-16' }} />
         </ThemeProvider>

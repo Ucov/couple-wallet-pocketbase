@@ -58,7 +58,7 @@ export default function CalendarClient({ initialEvents, coupleId }: Props) {
   return (
     <div className="flex-1 flex flex-col">
       {/* Cinta de Días */}
-      <div className="flex overflow-x-auto gap-2 px-6 py-4 no-scrollbar border-b border-zinc-800/50">
+      <div className="no-swipe flex overflow-x-auto gap-2 px-6 py-4 no-scrollbar border-b border-zinc-800/50">
         {days.map(day => {
           const isSelected = isSameDay(day, selectedDate)
           const hasEvents = initialEvents.some(ev => isSameDay(parseISO(ev.date), day))
