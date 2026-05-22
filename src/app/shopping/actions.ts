@@ -38,7 +38,6 @@ export async function addShoppingItem(formData: FormData) {
       created_by: user.id,
       status: 'pending'
     })
-    sendPushToPartner(profile.couple_id, user.id, '🛒 Lista de la compra', `${user.user_metadata?.name || 'Tu pareja'} ha añadido: ${name.trim()}`, '/shopping')
   }
 
   revalidatePath('/shopping')
