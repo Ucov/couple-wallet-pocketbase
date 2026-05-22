@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition, useEffect, useMemo } from 'react'
 import { PlusCircle, Trash2, CheckCircle2, Circle, User } from 'lucide-react'
 import { addChore, toggleChoreStatus, assignChore, deleteChore } from './actions'
 import { createClient } from '@/utils/supabase/client'
-import { useRouter } from 'next/navigation'
 
 interface Chore {
   id: string
@@ -26,27 +25,68 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
   const [chores, setChores] = useState<Chore[]>(initialChores)
   const [newTitle, setNewTitle] = useState('')
   const [isPending, startTransition] = useTransition()
-  const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
+
+  // Sincronizar con props del servidor
+  useEffect(() => {
+    setChores(initialChores)
+  }, [initialChores])
 
   useEffect(() => {
-    const channel = supabase
-      .channel('chores_changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'chores', filter: `couple_id=eq.${coupleId}` },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setChores(prev => [payload.new as Chore, ...prev.filter(i => i.id !== payload.new.id)])
-          } else if (payload.eventType === 'UPDATE') {
+    let channel: ReturnType<typeof supabase.channel> | null = null
+
+    const setupRealtime = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        console.warn('[Realtime] No hay sesión activa para chores')
+        return
+      }
+
+      console.log('[Realtime] Configurando canal chores...')
+
+      channel = supabase
+        .channel(`chores_rt_${coupleId}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'chores' },
+          (payload) => {
+            console.log('[Realtime] INSERT chore:', payload.new)
+            setChores(prev => {
+              if (prev.some(i => i.id === payload.new.id)) return prev
+              return [payload.new as Chore, ...prev]
+            })
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'chores' },
+          (payload) => {
+            console.log('[Realtime] UPDATE chore:', payload.new)
             setChores(prev => prev.map(i => i.id === payload.new.id ? payload.new as Chore : i))
-          } else if (payload.eventType === 'DELETE') {
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'chores' },
+          (payload) => {
+            console.log('[Realtime] DELETE chore:', payload.old)
             setChores(prev => prev.filter(i => i.id !== payload.old.id))
           }
-        }
-      )
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
+        )
+        .subscribe((status, err) => {
+          console.log('[Realtime] chores status:', status)
+          if (err) console.error('[Realtime] chores error:', err)
+        })
+    }
+
+    setupRealtime()
+
+    return () => {
+      if (channel) {
+        console.log('[Realtime] Limpiando canal chores')
+        supabase.removeChannel(channel)
+      }
+    }
   }, [coupleId, supabase])
 
   const pendingChores = chores.filter(c => !c.is_done)
@@ -61,6 +101,8 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
   }
 
   const handleToggle = (id: string, currentStatus: boolean) => {
+    // Optimistic update
+    setChores(prev => prev.map(c => c.id === id ? { ...c, is_done: !currentStatus } : c))
     startTransition(() => { toggleChoreStatus(id, !currentStatus) })
   }
 
@@ -70,11 +112,14 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
     else if (currentAssigned === currentUserId && partnerId) nextAssigned = partnerId
     else nextAssigned = null
 
+    // Optimistic update
+    setChores(prev => prev.map(c => c.id === id ? { ...c, assigned_to: nextAssigned } : c))
     startTransition(() => { assignChore(id, nextAssigned) })
   }
 
   const handleDelete = (id: string) => {
     if (confirm('¿Eliminar esta tarea definitivamente?')) {
+      setChores(prev => prev.filter(c => c.id !== id))
       startTransition(() => { deleteChore(id) })
     }
   }

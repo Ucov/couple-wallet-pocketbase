@@ -1,49 +1,89 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import ShoppingItem from '@/components/ShoppingItem'
 import { PartyPopper } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 import FinishShoppingButton from '@/components/FinishShoppingModal'
 
 export default function ShoppingListClient({ initialItems, coupleId }: { initialItems: any[], coupleId: string }) {
   const [items, setItems] = useState(initialItems)
-  const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
+  // Sincronizar con props del servidor
   useEffect(() => {
     setItems(initialItems)
   }, [initialItems])
 
   useEffect(() => {
-    const channel = supabase
-      .channel('shopping_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'shopping_items',
-          filter: `couple_id=eq.${coupleId}`,
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setItems(prev => [payload.new, ...prev.filter(i => i.id !== payload.new.id)])
-          } else if (payload.eventType === 'UPDATE') {
+    let channel: ReturnType<typeof supabase.channel> | null = null
+
+    const setupRealtime = async () => {
+      // Asegurar que tenemos sesión activa antes de suscribirnos
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        console.warn('[Realtime] No hay sesión activa, no se puede suscribir')
+        return
+      }
+
+      console.log('[Realtime] Sesión encontrada, configurando canal shopping...')
+
+      channel = supabase
+        .channel(`shopping_rt_${coupleId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'shopping_items',
+          },
+          (payload) => {
+            console.log('[Realtime] INSERT shopping:', payload.new)
+            setItems(prev => {
+              if (prev.some(i => i.id === payload.new.id)) return prev
+              return [payload.new, ...prev]
+            })
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'shopping_items',
+          },
+          (payload) => {
+            console.log('[Realtime] UPDATE shopping:', payload.new)
             setItems(prev => prev.map(i => i.id === payload.new.id ? payload.new : i))
-          } else if (payload.eventType === 'DELETE') {
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'shopping_items',
+          },
+          (payload) => {
+            console.log('[Realtime] DELETE shopping:', payload.old)
             setItems(prev => prev.filter(i => i.id !== payload.old.id))
           }
-          router.refresh()
-        }
-      )
-      .subscribe()
+        )
+        .subscribe((status, err) => {
+          console.log('[Realtime] shopping status:', status)
+          if (err) console.error('[Realtime] shopping error:', err)
+        })
+    }
+
+    setupRealtime()
 
     return () => {
-      supabase.removeChannel(channel)
+      if (channel) {
+        console.log('[Realtime] Limpiando canal shopping')
+        supabase.removeChannel(channel)
+      }
     }
-  }, [coupleId, router, supabase])
+  }, [coupleId, supabase])
 
   const pendingItems = items.filter(item => item.status === 'pending')
   const boughtItems = items.filter(item => item.status === 'bought')
