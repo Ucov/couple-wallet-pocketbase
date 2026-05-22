@@ -37,6 +37,15 @@ export default function ShoppingListClient({ initialItems, coupleId }: { initial
     })
   }
 
+  const handleToggle = (id: string, currentStatus: 'pending' | 'bought') => {
+    const nextStatus = currentStatus === 'pending' ? 'bought' : 'pending'
+    setItems(prev => prev.map(item => item.id === id ? { ...item, status: nextStatus } : item))
+  }
+
+  const handleDelete = (id: string) => {
+    setItems(prev => prev.filter(item => item.id !== id))
+  }
+
   const pendingItems = items.filter(item => item.status === 'pending')
   const boughtItems = items.filter(item => item.status === 'bought')
 
@@ -70,6 +79,8 @@ export default function ShoppingListClient({ initialItems, coupleId }: { initial
                 name={item.name} 
                 status={item.status as 'pending'} 
                 onUpdate={broadcastSync}
+                onToggle={(id, status) => handleToggle(id, status)}
+                onDelete={handleDelete}
               />
             ))}
           </div>
@@ -90,6 +101,8 @@ export default function ShoppingListClient({ initialItems, coupleId }: { initial
                 name={item.name} 
                 status={item.status as 'bought'} 
                 onUpdate={broadcastSync}
+                onToggle={(id, status) => handleToggle(id, status)}
+                onDelete={handleDelete}
               />
             ))}
           </div>
