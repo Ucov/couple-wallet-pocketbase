@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { sendPushToPartner } from '@/utils/webPush'
 
 export async function addShoppingItem(formData: FormData) {
   const supabase = await createClient()
@@ -37,6 +38,7 @@ export async function addShoppingItem(formData: FormData) {
       created_by: user.id,
       status: 'pending'
     })
+    sendPushToPartner(profile.couple_id, user.id, '🛒 Lista de la compra', `${user.user_metadata?.name || 'Tu pareja'} ha añadido: ${name.trim()}`, '/shopping')
   }
 
   revalidatePath('/shopping')
@@ -115,6 +117,8 @@ export async function finishShopping(formData: FormData) {
     })
 
   if (expenseError) throw new Error(expenseError.message)
+
+  sendPushToPartner(profile.couple_id, user.id, '💰 Nueva compra registrada', `${user.user_metadata?.name || 'Tu pareja'} ha pagado ${amount}€ en el supermercado`, '/')
 
   await supabase
     .from('shopping_items')

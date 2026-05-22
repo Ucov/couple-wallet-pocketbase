@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { sendPushToPartner } from '@/utils/webPush'
 
 export async function addCalendarEvent(coupleId: string, title: string, dateIso: string) {
   const supabase = await createClient()
@@ -22,6 +23,8 @@ export async function addCalendarEvent(coupleId: string, title: string, dateIso:
     throw new Error('No se pudo añadir el evento')
   }
   
+  sendPushToPartner(coupleId, user.id, '📅 Nuevo evento en agenda', `${user.user_metadata?.name || 'Tu pareja'} ha añadido: ${title}`, '/calendar')
+
   revalidatePath('/calendar')
 }
 

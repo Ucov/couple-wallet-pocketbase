@@ -2,13 +2,28 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { sendPushToPartner } from '@/utils/webPush'
 
 export async function addChore(coupleId: string, title: string) {
   const supabase = await createClient()
-  const { error } = await supabase
-    .from('chores')
-    .insert([{ couple_id: coupleId, title }])
-  if (error) throw new Error(error.message)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No auth')
+
+  try {
+    const { error } = await supabase
+      .from('chores')
+      .insert([{ couple_id: coupleId, title }])
+
+    if (error) {
+      console.error(error)
+      throw new Error('No se pudo añadir la tarea')
+    }
+
+    // Enviar notificación a la pareja (sin bloquear la ejecución de la UI)
+    sendPushToPartner(coupleId, user.id, '🧹 Nueva tarea', `${user.user_metadata?.name || 'Tu pareja'} ha añadido la tarea: ${title}`, '/chores')
+  } catch (error) {
+    throw error
+  }
 }
 
 export async function toggleChoreStatus(id: string, isDone: boolean) {

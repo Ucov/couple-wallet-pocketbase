@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 import ProfileForm from './ProfileForm'
 import CopyCodeButton from './CopyCodeButton'
 import LeaveGroupButton from './LeaveGroupButton'
+import PushNotificationsClient from '@/components/PushNotificationsClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,6 +42,10 @@ export default async function ProfilePage() {
         <h2 className="text-sm text-zinc-400 font-semibold uppercase tracking-wider mb-4">Ajustes Personales</h2>
         <ProfileForm initialName={profile?.name || ''} />
       </section>
+
+      {profile?.couple_id && (
+        <PushNotificationsClient coupleId={profile.couple_id} />
+      )}
 
       {joinCode && (
         <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-6 shadow-lg">
