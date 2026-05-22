@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { PlusCircle, LogOut, Pencil, ChevronLeft, ChevronRight, Repeat, CheckCircle, UserCog } from 'lucide-react'
 import { logout } from './login/actions'
 import DeleteExpenseButton from '@/components/DeleteExpenseButton'
-import CategoryDonutChart from '@/components/CategoryDonutChart'
+import DailyBarChart from '@/components/DailyBarChart'
+import CategoryProgressList from '@/components/CategoryProgressList'
 import { applyRecurringExpenses } from './recurring-actions'
 import { settleMonth } from './settlement-actions'
 import MonthNavigator from '@/components/MonthNavigator'
@@ -60,14 +61,12 @@ export default async function Dashboard({
   }
 
   if (!userProfile?.couple_id) {
-    // Sin grupo → llevar directamente a la pantalla de configuración
     redirect('/setup-couple')
   }
 
   const myName = userProfile?.name || user.email?.split('@')[0] || 'Usuario'
   let partnerName = 'Pareja'
   
-  // Obtener el nombre de la pareja
   const { data: partnerData } = await supabase
     .from('profiles')
     .select('name')
@@ -83,7 +82,6 @@ export default async function Dashboard({
   const now = new Date()
   
   if (userProfile?.couple_id) {
-    // Aplicar gastos recurrentes del mes actual (si no se han aplicado ya)
     try {
       await applyRecurringExpenses(userProfile.couple_id, now.getMonth(), now.getFullYear(), false)
     } catch (e) {
@@ -122,11 +120,18 @@ export default async function Dashboard({
 
   const { data: expenses } = await expensesQuery
 
-  // 5. Cálculos
+  // 5. Cálculos del mes actual
   let myTotal = 0
   let partnerTotal = 0
   const categoryTotals: Record<string, { name: string; amount: number; color: string; icon: string }> = {}
   
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
+  const dailyData = Array.from({ length: daysInMonth }, (_, i) => ({
+    day: String(i + 1),
+    amount: 0,
+    isToday: currentMonth === now.getMonth() && currentYear === now.getFullYear() && i + 1 === now.getDate()
+  }))
+
   expenses?.forEach(exp => {
     const amount = Number(exp.amount)
     if (exp.paid_by === user.id) {
@@ -134,6 +139,9 @@ export default async function Dashboard({
     } else {
       partnerTotal += amount
     }
+
+    const day = new Date(exp.date).getDate()
+    dailyData[day - 1].amount += amount
 
     const categories = exp.categories
     const category = Array.isArray(categories) ? categories[0] : categories
@@ -152,7 +160,33 @@ export default async function Dashboard({
   const totalMonth = myTotal + partnerTotal
   const sortedCategories = Object.values(categoryTotals).sort((a, b) => b.amount - a.amount)
 
-  // 6. Verificar si el mes está saldado
+  // 6. Obtener gastos del mes anterior para comparativa
+  const prevMonthStart = new Date(currentYear, currentMonth - 1, 1)
+  const prevMonthEnd = new Date(currentYear, currentMonth, 0, 23, 59, 59)
+  
+  let prevExpensesQuery = supabase
+    .from('expenses')
+    .select('amount')
+    .gte('date', prevMonthStart.toISOString())
+    .lte('date', prevMonthEnd.toISOString())
+    
+  if (userProfile?.couple_id) {
+    prevExpensesQuery = prevExpensesQuery.eq('couple_id', userProfile.couple_id)
+  } else {
+    prevExpensesQuery = prevExpensesQuery.eq('paid_by', user.id)
+  }
+  
+  const { data: prevExpenses } = await prevExpensesQuery
+  const prevTotal = prevExpenses?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
+  
+  let trendPercent = 0
+  if (prevTotal > 0) {
+    trendPercent = ((totalMonth - prevTotal) / prevTotal) * 100
+  } else if (totalMonth > 0) {
+    trendPercent = 100
+  }
+
+  // 7. Verificar si el mes está saldado
   let isSettled = false
   if (userProfile?.couple_id) {
     const { data: settlement } = await supabase
@@ -168,34 +202,33 @@ export default async function Dashboard({
     }
   }
 
-  let settlementMessage = 'Sin gastos este mes.'
+  let settlementMessage = 'Sin gastos este mes'
+  let settlementSubMessage = ''
   let showSettleButton = false
+  let debtAmount = 0
+  let isOwed = false
 
   if (userProfile?.couple_id) {
     if (isSettled) {
-      settlementMessage = 'Mes saldado. Todo al día. ✅'
+      settlementMessage = 'Mes saldado. Todo al día ✅'
     } else {
       const diff = Math.abs(myTotal - partnerTotal)
-      const debt = diff / 2
+      debtAmount = diff / 2
       if (myTotal > partnerTotal) {
-        settlementMessage = `${partnerName} te debe €${debt.toFixed(2)}`
-        showSettleButton = debt > 0
+        settlementMessage = 'Te deben un Bizum de:'
+        settlementSubMessage = partnerName
+        isOwed = true
+        showSettleButton = debtAmount > 0
       } else if (partnerTotal > myTotal) {
-        settlementMessage = `Le debes €${debt.toFixed(2)} a ${partnerName}`
-        showSettleButton = debt > 0
+        settlementMessage = 'Tienes que hacer un Bizum de:'
+        settlementSubMessage = `a ${partnerName}`
+        isOwed = false
+        showSettleButton = debtAmount > 0
       } else if (myTotal > 0) {
-        settlementMessage = 'Estáis en paz. 🍻'
+        settlementMessage = 'Estáis completamente en paz 🍻'
       }
     }
-  } else {
-    settlementMessage = `Has gastado €${myTotal.toFixed(2)} este mes`
   }
-
-  // Navegación de meses
-  const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1
-  const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear
-  const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1
-  const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear
 
   const monthName = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(startOfMonth)
 
@@ -220,60 +253,59 @@ export default async function Dashboard({
         </div>
       </header>
 
-      {/* Navegador de Mes */}
       <MonthNavigator currentMonth={currentMonth} currentYear={currentYear} monthName={monthName} />
 
-      {/* Ajuste de Cuentas */}
-      <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-8 shadow-lg">
-        <div className="flex justify-between items-start mb-2">
-          <h2 className="text-sm text-zinc-400 font-semibold uppercase tracking-wider">Balance del Mes</h2>
-          {showSettleButton && userProfile?.couple_id && (
-            <form action={settleMonth.bind(null, userProfile.couple_id, currentMonth, currentYear)}>
-              <button 
-                type="submit" 
-                className="text-xs font-semibold bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg hover:bg-emerald-600/30 transition-colors flex items-center gap-1.5"
-              >
-                <CheckCircle size={14} /> Saldar Mes
-              </button>
-            </form>
-          )}
-        </div>
-        {!userProfile?.couple_id ? (
-          <div className="flex flex-col items-start gap-3 mt-1">
-            <p className="text-lg font-medium text-red-400 leading-snug">
-              Aún no tienes pareja vinculada.
-            </p>
-            <Link 
-              href="/setup-couple" 
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2 rounded-xl transition-colors text-sm"
-            >
-              Crear o unirse a un grupo
-            </Link>
-          </div>
-        ) : (
-          <p className="text-xl font-medium text-emerald-400 leading-snug">
-            {settlementMessage}
-          </p>
-        )}
-        <div className="flex justify-between mt-6 text-sm">
-          <div className="flex flex-col">
-            <span className="text-zinc-500">Tú has pagado</span>
-            <span className={`text-lg font-semibold ${isSettled ? 'text-zinc-400' : 'text-zinc-200'}`}>€{myTotal.toFixed(2)}</span>
-          </div>
-          <div className="flex flex-col text-right">
-            <span className="text-zinc-500">{partnerName} pagó</span>
-            <span className={`text-lg font-semibold ${isSettled ? 'text-zinc-400' : 'text-zinc-200'}`}>€{partnerTotal.toFixed(2)}</span>
+      {/* Gráfico de Barras Diario */}
+      <DailyBarChart data={dailyData} total={totalMonth} trendPercent={trendPercent} />
+
+      {/* Ajuste de Cuentas (Premium Card) */}
+      <section className="mb-8">
+        <div className={`relative overflow-hidden rounded-3xl p-6 shadow-xl border ${debtAmount > 0 && !isOwed && !isSettled ? 'bg-gradient-to-br from-red-950 to-zinc-900 border-red-900/50' : debtAmount > 0 && isOwed && !isSettled ? 'bg-gradient-to-br from-emerald-950 to-zinc-900 border-emerald-900/50' : 'bg-zinc-900 border-zinc-800'}`}>
+          <div className="relative z-10 flex flex-col justify-center items-center text-center">
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-400 mb-2">Balance Mensual</h2>
+            <p className="text-zinc-300 font-medium mb-1">{settlementMessage}</p>
+            {debtAmount > 0 && !isSettled && (
+              <div className="flex flex-col items-center justify-center mt-2 mb-4">
+                <span className={`text-5xl font-black ${isOwed ? 'text-emerald-400' : 'text-red-400'} tracking-tighter`}>
+                  €{debtAmount.toFixed(2)}
+                </span>
+                <span className="text-zinc-500 mt-1">{settlementSubMessage}</span>
+              </div>
+            )}
+            
+            {showSettleButton && userProfile?.couple_id && (
+              <form action={settleMonth.bind(null, userProfile.couple_id, currentMonth, currentYear)} className="mt-4 w-full">
+                <button 
+                  type="submit" 
+                  className={`w-full py-3 rounded-xl font-bold shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${isOwed ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/50' : 'bg-red-600 hover:bg-red-500 text-white shadow-red-900/50'}`}
+                >
+                  <CheckCircle size={20} /> 
+                  Saldar Mes
+                </button>
+              </form>
+            )}
+            
+            <div className="flex justify-between w-full mt-6 pt-6 border-t border-zinc-800/50 text-sm">
+              <div className="flex flex-col items-start">
+                <span className="text-zinc-500">Tú pagaste</span>
+                <span className="text-lg font-semibold text-zinc-200">€{myTotal.toFixed(2)}</span>
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="text-zinc-500">{partnerName} pagó</span>
+                <span className="text-lg font-semibold text-zinc-200">€{partnerTotal.toFixed(2)}</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Resumen por Categorías (donut) */}
-      <CategoryDonutChart categories={sortedCategories} total={totalMonth} />
+      {/* Resumen por Categorías (Progreso) */}
+      <CategoryProgressList categories={sortedCategories} total={totalMonth} />
 
       {/* Lista de Gastos */}
       <section className="flex-1">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-zinc-100">Gastos del Mes</h2>
+          <h2 className="text-lg font-semibold text-zinc-100">Últimos Gastos</h2>
         </div>
 
         <div className="space-y-3 pb-24">
@@ -281,9 +313,9 @@ export default async function Dashboard({
             const categories = expense.categories
             const category = Array.isArray(categories) ? categories[0] : categories
             return (
-              <div key={expense.id} className="bg-zinc-900/50 p-4 rounded-xl flex justify-between items-center border border-zinc-800/50">
+              <div key={expense.id} className="bg-zinc-900/50 p-4 rounded-xl flex justify-between items-center border border-zinc-800/50 hover:bg-zinc-800/50 transition-colors group">
                 <div className="flex gap-3 items-center">
-                  <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-xl">
+                  <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-xl shadow-inner">
                     {category?.icon || '💰'}
                   </div>
                   <div>
@@ -296,26 +328,28 @@ export default async function Dashboard({
               <div className="text-right flex items-center gap-2">
                 <div className="mr-2">
                   <p className="font-bold text-zinc-100">€{Number(expense.amount).toFixed(2)}</p>
-                  <p className="text-xs text-zinc-400 mt-0.5">
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-500 mt-0.5 font-semibold">
                     {expense.paid_by === user.id ? 'Tú' : partnerName}
                   </p>
                 </div>
-                <Link href={`/edit/${expense.id}`} className="text-zinc-600 hover:text-emerald-400 transition-colors p-1">
-                  <Pencil size={18} />
-                </Link>
-                <DeleteExpenseButton 
-                  id={expense.id} 
-                  concept={expense.concept} 
-                  amount={Number(expense.amount)} 
-                />
+                <div className="flex flex-col sm:flex-row opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity gap-1">
+                  <Link href={`/edit/${expense.id}`} className="text-zinc-600 hover:text-emerald-400 transition-colors p-1 bg-zinc-900 rounded-lg border border-zinc-800">
+                    <Pencil size={16} />
+                  </Link>
+                  <DeleteExpenseButton 
+                    id={expense.id} 
+                    concept={expense.concept} 
+                    amount={Number(expense.amount)} 
+                  />
+                </div>
               </div>
             </div>
           )
         })}
           {(!expenses || expenses.length === 0) && (
-            <div className="text-center py-12 border-2 border-dashed border-zinc-800 rounded-2xl">
-              <p className="text-zinc-500">No hay gastos este mes.</p>
-              <p className="text-xs text-zinc-600 mt-1">¡Pulsa el botón + para añadir uno!</p>
+            <div className="text-center py-12 border-2 border-dashed border-zinc-800 rounded-2xl bg-zinc-900/20">
+              <p className="text-zinc-500 font-medium">Aún no hay gastos en este mes.</p>
+              <p className="text-sm text-zinc-600 mt-1">Pulsa el botón + abajo para añadir el primero.</p>
             </div>
           )}
         </div>
@@ -325,7 +359,7 @@ export default async function Dashboard({
       <div className="fixed bottom-24 left-0 right-0 flex justify-center pointer-events-none z-40">
         <Link
           href="/add"
-          className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-full p-4 shadow-xl shadow-emerald-900/20 pointer-events-auto transition-transform hover:scale-110 active:scale-95"
+          className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-full p-4 shadow-[0_0_40px_rgba(52,211,153,0.3)] pointer-events-auto transition-all hover:scale-110 active:scale-95"
         >
           <PlusCircle size={32} />
         </Link>
