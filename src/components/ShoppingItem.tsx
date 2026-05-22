@@ -9,9 +9,10 @@ interface ShoppingItemProps {
   id: string
   name: string
   status: 'pending' | 'bought'
+  onUpdate?: () => void
 }
 
-export default function ShoppingItem({ id, name, status }: ShoppingItemProps) {
+export default function ShoppingItem({ id, name, status, onUpdate }: ShoppingItemProps) {
   const [isPending, startTransition] = useTransition()
   const [localStatus, setLocalStatus] = useState(status)
 
@@ -26,16 +27,18 @@ export default function ShoppingItem({ id, name, status }: ShoppingItemProps) {
     const nextStatus = isBought ? 'pending' : 'bought'
     setLocalStatus(nextStatus)
     
-    startTransition(() => {
-      toggleShoppingItem(id, status)
+    startTransition(async () => {
+      await toggleShoppingItem(id, status)
+      onUpdate?.()
     })
   }
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation() // Prevent toggling when clicking delete
     if (window.confirm('¿Eliminar este artículo del historial definitivamente?')) {
-      startTransition(() => {
-        deleteShoppingItem(id)
+      startTransition(async () => {
+        await deleteShoppingItem(id)
+        onUpdate?.()
       })
     }
   }

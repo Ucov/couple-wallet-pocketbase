@@ -6,91 +6,43 @@ import ShoppingItem from '@/components/ShoppingItem'
 import { PartyPopper } from 'lucide-react'
 import FinishShoppingButton from '@/components/FinishShoppingModal'
 
+import { useRouter } from 'next/navigation'
+
 export default function ShoppingListClient({ initialItems, coupleId }: { initialItems: any[], coupleId: string }) {
   const [items, setItems] = useState(initialItems)
   const supabase = useMemo(() => createClient(), [])
+  const router = useRouter()
 
   // Sincronizar con props del servidor
   useEffect(() => {
     setItems(initialItems)
   }, [initialItems])
 
+  // Realtime robusto mediante Broadcast + Refresh
   useEffect(() => {
-    let channel: ReturnType<typeof supabase.channel> | null = null
+    const channel = supabase.channel(`sync_shop_${coupleId}`)
+      .on('broadcast', { event: 'update_shopping' }, () => {
+        router.refresh()
+      })
+      .subscribe()
 
-    const setupRealtime = async () => {
-      // Asegurar que tenemos sesión activa antes de suscribirnos
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        console.warn('[Realtime] No hay sesión activa, no se puede suscribir')
-        return
-      }
+    return () => { supabase.removeChannel(channel) }
+  }, [coupleId, supabase, router])
 
-      console.log('[Realtime] Sesión encontrada, configurando canal shopping...')
-
-      channel = supabase
-        .channel(`shopping_rt_${coupleId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'shopping_items',
-          },
-          (payload: any) => {
-            console.log('[Realtime] INSERT shopping:', payload.new)
-            setItems(prev => {
-              if (prev.some(i => i.id === payload.new.id)) return prev
-              return [payload.new, ...prev]
-            })
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'shopping_items',
-          },
-          (payload: any) => {
-            console.log('[Realtime] UPDATE shopping:', payload.new)
-            setItems(prev => prev.map(i => i.id === payload.new.id ? payload.new : i))
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'DELETE',
-            schema: 'public',
-            table: 'shopping_items',
-          },
-          (payload: any) => {
-            console.log('[Realtime] DELETE shopping:', payload.old)
-            setItems(prev => prev.filter(i => i.id !== payload.old.id))
-          }
-        )
-        .subscribe((status: string, err?: any) => {
-          console.log('[Realtime] shopping status:', status)
-          if (err) console.error('[Realtime] shopping error:', err)
-        })
-    }
-
-    setupRealtime()
-
-    return () => {
-      if (channel) {
-        console.log('[Realtime] Limpiando canal shopping')
-        supabase.removeChannel(channel)
-      }
-    }
-  }, [coupleId, supabase])
+  const broadcastSync = () => {
+    supabase.channel(`sync_shop_${coupleId}`).send({
+      type: 'broadcast',
+      event: 'update_shopping',
+      payload: {}
+    })
+  }
 
   const pendingItems = items.filter(item => item.status === 'pending')
   const boughtItems = items.filter(item => item.status === 'bought')
 
   return (
     <>
-      <FinishShoppingButton boughtItemsCount={boughtItems.length} />
+      <FinishShoppingButton boughtItemsCount={boughtItems.length} coupleId={coupleId} />
 
       {/* Lista Pendiente */}
       <section className="mb-8 relative z-10">
@@ -112,7 +64,13 @@ export default function ShoppingListClient({ initialItems, coupleId }: { initial
         ) : (
           <div className="flex flex-wrap gap-2">
             {pendingItems.map(item => (
-              <ShoppingItem key={item.id} id={item.id} name={item.name} status={item.status as 'pending'} />
+              <ShoppingItem 
+                key={item.id} 
+                id={item.id} 
+                name={item.name} 
+                status={item.status as 'pending'} 
+                onUpdate={broadcastSync}
+              />
             ))}
           </div>
         )}
@@ -126,7 +84,13 @@ export default function ShoppingListClient({ initialItems, coupleId }: { initial
           </h2>
           <div className="flex flex-wrap gap-2">
             {boughtItems.map(item => (
-              <ShoppingItem key={item.id} id={item.id} name={item.name} status={item.status as 'bought'} />
+              <ShoppingItem 
+                key={item.id} 
+                id={item.id} 
+                name={item.name} 
+                status={item.status as 'bought'} 
+                onUpdate={broadcastSync}
+              />
             ))}
           </div>
         </section>

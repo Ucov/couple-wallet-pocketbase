@@ -9,6 +9,9 @@ import {
 import { es } from 'date-fns/locale'
 import { PlusCircle, Trash2, Clock, CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, List } from 'lucide-react'
 import { addCalendarEvent, deleteCalendarEvent } from './actions'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/utils/supabase/client'
+import { useEffect } from 'react'
 
 interface CalendarEvent {
   id: string
@@ -30,6 +33,27 @@ export default function CalendarClient({ initialEvents, coupleId }: Props) {
   const [newEventTitle, setNewEventTitle] = useState('')
   const [newEventTime, setNewEventTime] = useState('20:00')
   const [isPending, startTransition] = useTransition()
+  const router = useRouter()
+  const supabase = useMemo(() => createClient(), [])
+
+  // Realtime robusto mediante Broadcast + Refresh
+  useEffect(() => {
+    const channel = supabase.channel(`sync_calendar_${coupleId}`)
+      .on('broadcast', { event: 'update_calendar' }, () => {
+        router.refresh()
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [coupleId, supabase, router])
+
+  const broadcastSync = () => {
+    supabase.channel(`sync_calendar_${coupleId}`).send({
+      type: 'broadcast',
+      event: 'update_calendar',
+      payload: {}
+    })
+  }
   
   // -- VISTA SEMANAL (Cinta horizontal) --
   const weeklyDays = useMemo(() => {
@@ -58,6 +82,7 @@ export default function CalendarClient({ initialEvents, coupleId }: Props) {
 
     startTransition(async () => {
       await addCalendarEvent(coupleId, newEventTitle, eventDate.toISOString())
+      broadcastSync()
       setIsModalOpen(false)
       setNewEventTitle('')
     })
@@ -65,8 +90,9 @@ export default function CalendarClient({ initialEvents, coupleId }: Props) {
 
   const handleDelete = (id: string) => {
     if (confirm('¿Borrar este evento de la agenda?')) {
-      startTransition(() => {
-        deleteCalendarEvent(id)
+      startTransition(async () => {
+        await deleteCalendarEvent(id)
+        broadcastSync()
       })
     }
   }

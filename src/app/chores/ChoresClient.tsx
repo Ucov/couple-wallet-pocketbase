@@ -22,43 +22,37 @@ interface Props {
   partnerName: string
 }
 
+import { useRouter } from 'next/navigation'
+
 export default function ChoresClient({ initialChores, coupleId, currentUserId, currentUserName, partnerId, partnerName }: Props) {
   const [chores, setChores] = useState<Chore[]>(initialChores)
   const [newTitle, setNewTitle] = useState('')
   const [isPending, startTransition] = useTransition()
+  const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     setChores(initialChores)
   }, [initialChores])
 
-  // Realtime
+  // Realtime robusto mediante Broadcast + Refresh
   useEffect(() => {
-    let channel: ReturnType<typeof supabase.channel> | null = null
+    const channel = supabase.channel(`sync_${coupleId}`)
+      .on('broadcast', { event: 'update_chores' }, () => {
+        router.refresh() // Obliga a Next.js a traer los datos frescos del servidor
+      })
+      .subscribe()
 
-    const setupRealtime = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+    return () => { supabase.removeChannel(channel) }
+  }, [coupleId, supabase, router])
 
-      channel = supabase
-        .channel(`chores_rt_${coupleId}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chores' },
-          (payload: any) => {
-            setChores(prev => {
-              if (prev.some(i => i.id === payload.new.id)) return prev
-              return [payload.new as Chore, ...prev]
-            })
-          })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chores' },
-          (payload: any) => { setChores(prev => prev.map(i => i.id === payload.new.id ? payload.new as Chore : i)) })
-        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'chores' },
-          (payload: any) => { setChores(prev => prev.filter(i => i.id !== payload.old.id)) })
-        .subscribe()
-    }
-
-    setupRealtime()
-    return () => { if (channel) supabase.removeChannel(channel) }
-  }, [coupleId, supabase])
+  const broadcastSync = () => {
+    supabase.channel(`sync_${coupleId}`).send({
+      type: 'broadcast',
+      event: 'update_chores',
+      payload: {}
+    })
+  }
 
   const pendingChores = chores.filter(c => !c.is_done)
   const doneChores = chores.filter(c => c.is_done)
@@ -71,28 +65,45 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
     const tempId = crypto.randomUUID()
     setChores(prev => [{ id: tempId, title: tempTitle, is_done: false, assigned_to: null }, ...prev])
     setNewTitle('')
-    startTransition(() => { addChore(coupleId, tempTitle) })
+    startTransition(async () => { 
+      await addChore(coupleId, tempTitle) 
+      broadcastSync()
+    })
   }
 
   const handleToggle = (id: string, currentStatus: boolean) => {
     setChores(prev => prev.map(c => c.id === id ? { ...c, is_done: !currentStatus } : c))
-    startTransition(() => { toggleChoreStatus(id, !currentStatus) })
+    startTransition(async () => { 
+      await toggleChoreStatus(id, !currentStatus) 
+      broadcastSync()
+    })
   }
 
   const handleAssign = (e: React.MouseEvent, id: string, currentAssigned: string | null) => {
     e.stopPropagation()
+    // Si no está asignada o si es de la pareja (caso raro ahora), me la asigno a mí.
+    // Si ya es mía, la desasigno.
     let nextAssigned: string | null = null
-    if (currentAssigned === null) nextAssigned = currentUserId
-    else if (currentAssigned === currentUserId && partnerId) nextAssigned = partnerId
-    else nextAssigned = null
+    if (currentAssigned !== currentUserId) {
+      nextAssigned = currentUserId
+    } else {
+      nextAssigned = null
+    }
+
     setChores(prev => prev.map(c => c.id === id ? { ...c, assigned_to: nextAssigned } : c))
-    startTransition(() => { assignChore(id, nextAssigned) })
+    startTransition(async () => { 
+      await assignChore(id, nextAssigned) 
+      broadcastSync()
+    })
   }
 
   const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
     setChores(prev => prev.filter(c => c.id !== id))
-    startTransition(() => { deleteChore(id) })
+    startTransition(async () => { 
+      await deleteChore(id) 
+      broadcastSync()
+    })
   }
 
   const renderAssigneeBadge = (assigned_to: string | null) => {
