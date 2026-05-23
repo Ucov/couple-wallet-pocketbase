@@ -41,6 +41,7 @@ export async function toggleChoreStatus(id: string, isDone: boolean) {
       })
       .eq('id', id)
     if (error) return { error: error.message }
+    revalidatePath('/chores')
     return { success: true }
   } catch (err: any) {
     return { error: err.message || String(err) }
@@ -58,6 +59,7 @@ export async function assignChore(id: string, assignedTo: string | null) {
       .update({ assigned_to: assignedTo })
       .eq('id', id)
     if (error) return { error: error.message }
+    revalidatePath('/chores')
     return { success: true }
   } catch (err: any) {
     return { error: err.message || String(err) }
@@ -75,6 +77,7 @@ export async function deleteChore(id: string) {
       .delete()
       .eq('id', id)
     if (error) return { error: error.message }
+    revalidatePath('/chores')
     return { success: true }
   } catch (err: any) {
     return { error: err.message || String(err) }
