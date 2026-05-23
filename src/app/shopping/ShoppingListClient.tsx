@@ -43,16 +43,18 @@ export default function ShoppingListClient({ initialItems, coupleId }: { initial
     const nextStatus = currentStatus === 'pending' ? 'bought' : 'pending'
     setItems(prev => prev.map(item => item.id === id ? { ...item, status: nextStatus } : item))
     startTransition(async () => {
-      await toggleShoppingItem(id, currentStatus)
-      broadcastSync()
+      const res = await toggleShoppingItem(id, currentStatus)
+      if (res?.error) alert('Error: ' + res.error)
+      else broadcastSync()
     })
   }
 
   const handleDelete = (id: string) => {
     setItems(prev => prev.filter(item => item.id !== id))
     startTransition(async () => {
-      await deleteShoppingItem(id)
-      broadcastSync()
+      const res = await deleteShoppingItem(id)
+      if (res?.error) alert('Error: ' + res.error)
+      else broadcastSync()
     })
   }
 

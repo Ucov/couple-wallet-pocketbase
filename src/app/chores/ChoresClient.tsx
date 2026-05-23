@@ -74,8 +74,9 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
   const handleToggle = (id: string, currentStatus: boolean) => {
     setChores(prev => prev.map(c => c.id === id ? { ...c, is_done: !currentStatus } : c))
     startTransition(async () => { 
-      await toggleChoreStatus(id, !currentStatus) 
-      broadcastSync()
+      const res = await toggleChoreStatus(id, !currentStatus)
+      if (res?.error) alert('Error: ' + res.error)
+      else broadcastSync()
     })
   }
 
@@ -96,8 +97,9 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
 
     setChores(prev => prev.map(c => c.id === id ? { ...c, assigned_to: nextAssigned } : c))
     startTransition(async () => { 
-      await assignChore(id, nextAssigned) 
-      broadcastSync()
+      const res = await assignChore(id, nextAssigned)
+      if (res?.error) alert('Error: ' + res.error)
+      else broadcastSync()
     })
   }
 
@@ -105,8 +107,9 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
     e.stopPropagation()
     setChores(prev => prev.filter(c => c.id !== id))
     startTransition(async () => { 
-      await deleteChore(id) 
-      broadcastSync()
+      const res = await deleteChore(id)
+      if (res?.error) alert('Error: ' + res.error)
+      else broadcastSync()
     })
   }
 
