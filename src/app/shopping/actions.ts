@@ -45,22 +45,32 @@ export async function addShoppingItem(formData: FormData) {
 
 export async function toggleShoppingItem(id: string, currentStatus: string) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
   const newStatus = currentStatus === 'pending' ? 'bought' : 'pending'
   
-  await supabase
+  const { error } = await supabase
     .from('shopping_items')
     .update({ status: newStatus })
     .eq('id', id)
+
+  if (error) throw new Error(error.message)
 
   revalidatePath('/shopping')
 }
 
 export async function deleteShoppingItem(id: string) {
   const supabase = await createClient()
-  await supabase
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { error } = await supabase
     .from('shopping_items')
     .delete()
     .eq('id', id)
+
+  if (error) throw new Error(error.message)
 
   revalidatePath('/shopping')
 }

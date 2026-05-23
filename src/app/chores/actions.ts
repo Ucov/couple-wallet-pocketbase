@@ -43,6 +43,9 @@ export async function toggleChoreStatus(id: string, isDone: boolean) {
 
 export async function assignChore(id: string, assignedTo: string | null) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No auth')
+
   const { error } = await supabase
     .from('chores')
     .update({ assigned_to: assignedTo })
@@ -52,6 +55,9 @@ export async function assignChore(id: string, assignedTo: string | null) {
 
 export async function deleteChore(id: string) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No auth')
+
   const { error } = await supabase
     .from('chores')
     .delete()
