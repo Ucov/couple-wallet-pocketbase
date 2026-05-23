@@ -308,7 +308,7 @@ export default async function Dashboard({
           <h2 className="text-lg font-semibold text-zinc-100">Últimos Gastos</h2>
         </div>
 
-        <div className="space-y-3 pb-24">
+        <div className="space-y-3 pb-32">
           {expenses?.map((expense: Expense) => {
             const categories = expense.categories
             const category = Array.isArray(categories) ? categories[0] : categories
@@ -355,13 +355,13 @@ export default async function Dashboard({
         </div>
       </section>
 
-      {/* Botón Flotante */}
       <div className="fixed bottom-24 left-0 right-0 flex justify-center pointer-events-none z-40">
         <Link
           href="/add"
-          className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-full p-4 shadow-[0_0_40px_rgba(52,211,153,0.3)] pointer-events-auto transition-all hover:scale-110 active:scale-95"
+          className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-full px-6 py-4 shadow-[0_0_40px_rgba(52,211,153,0.3)] pointer-events-auto transition-all hover:scale-105 active:scale-95 flex items-center gap-2 font-semibold"
         >
-          <PlusCircle size={32} />
+          <PlusCircle size={24} />
+          <span>Añadir Gasto</span>
         </Link>
       </div>
     </main>

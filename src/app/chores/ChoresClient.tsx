@@ -81,13 +81,17 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
 
   const handleAssign = (e: React.MouseEvent, id: string, currentAssigned: string | null) => {
     e.stopPropagation()
-    // Si no está asignada o si es de la pareja (caso raro ahora), me la asigno a mí.
-    // Si ya es mía, la desasigno.
+    
+    // Si ya está asignada a la pareja, no permitir quitársela (solo puedes asignarte tareas a ti mismo)
+    if (currentAssigned && currentAssigned !== currentUserId) {
+      return
+    }
+
     let nextAssigned: string | null = null
-    if (currentAssigned !== currentUserId) {
-      nextAssigned = currentUserId
-    } else {
+    if (currentAssigned === currentUserId) {
       nextAssigned = null
+    } else {
+      nextAssigned = currentUserId
     }
 
     setChores(prev => prev.map(c => c.id === id ? { ...c, assigned_to: nextAssigned } : c))

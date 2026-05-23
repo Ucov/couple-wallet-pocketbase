@@ -1,15 +1,17 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo, useCallback, useTransition } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import ShoppingItem from '@/components/ShoppingItem'
 import { PartyPopper } from 'lucide-react'
 import FinishShoppingButton from '@/components/FinishShoppingModal'
+import { toggleShoppingItem, deleteShoppingItem } from '@/app/shopping/actions'
 
 import { useRouter } from 'next/navigation'
 
 export default function ShoppingListClient({ initialItems, coupleId }: { initialItems: any[], coupleId: string }) {
   const [items, setItems] = useState(initialItems)
+  const [isPending, startTransition] = useTransition()
   const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
 
@@ -40,10 +42,18 @@ export default function ShoppingListClient({ initialItems, coupleId }: { initial
   const handleToggle = (id: string, currentStatus: 'pending' | 'bought') => {
     const nextStatus = currentStatus === 'pending' ? 'bought' : 'pending'
     setItems(prev => prev.map(item => item.id === id ? { ...item, status: nextStatus } : item))
+    startTransition(async () => {
+      await toggleShoppingItem(id, currentStatus)
+      broadcastSync()
+    })
   }
 
   const handleDelete = (id: string) => {
     setItems(prev => prev.filter(item => item.id !== id))
+    startTransition(async () => {
+      await deleteShoppingItem(id)
+      broadcastSync()
+    })
   }
 
   const pendingItems = items.filter(item => item.status === 'pending')
