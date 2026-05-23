@@ -10,6 +10,7 @@ import { applyRecurringExpenses } from './recurring-actions'
 import { settleMonth } from './settlement-actions'
 import MonthNavigator from '@/components/MonthNavigator'
 import { leaveCouple } from './setup-couple/actions'
+import FloatingAddButton from '@/components/FloatingAddButton'
 
 // Forzamos que la página sea siempre dinámica y no se guarde en caché
 export const dynamic = 'force-dynamic'
@@ -355,15 +356,7 @@ export default async function Dashboard({
         </div>
       </section>
 
-      <div className="fixed bottom-24 left-0 right-0 flex justify-center pointer-events-none z-40">
-        <Link
-          href="/add"
-          className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-full px-6 py-4 shadow-[0_0_40px_rgba(52,211,153,0.3)] pointer-events-auto transition-all hover:scale-105 active:scale-95 flex items-center gap-2 font-semibold"
-        >
-          <PlusCircle size={24} />
-          <span>Añadir Gasto</span>
-        </Link>
-      </div>
+      <FloatingAddButton />
     </main>
   )
 }
