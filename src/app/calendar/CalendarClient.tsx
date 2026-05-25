@@ -12,6 +12,7 @@ import { addCalendarEvent, deleteCalendarEvent } from './actions'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { useEffect } from 'react'
+import { toast } from 'sonner'
 
 interface CalendarEvent {
   id: string
@@ -81,10 +82,15 @@ export default function CalendarClient({ initialEvents, coupleId }: Props) {
     eventDate.setHours(parseInt(hours), parseInt(minutes), 0, 0)
 
     startTransition(async () => {
-      await addCalendarEvent(coupleId, newEventTitle, eventDate.toISOString())
-      broadcastSync()
-      setIsModalOpen(false)
-      setNewEventTitle('')
+      const res = await addCalendarEvent(coupleId, newEventTitle, eventDate.toISOString())
+      if (res?.error) {
+        toast.error(res.error)
+      } else {
+        toast.success('Evento añadido a la agenda')
+        broadcastSync()
+        setIsModalOpen(false)
+        setNewEventTitle('')
+      }
     })
   }
 
@@ -254,10 +260,11 @@ export default function CalendarClient({ initialEvents, coupleId }: Props) {
       </div>
 
       {/* Botón Añadir Evento */}
-      <div className="fixed bottom-24 left-0 right-0 flex justify-center pointer-events-none z-40">
+      <div className="fixed bottom-6 right-6 pointer-events-none z-50">
         <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-full p-4 shadow-xl shadow-emerald-900/20 pointer-events-auto transition-transform hover:scale-110 active:scale-95"
+          className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-full p-4 shadow-xl shadow-emerald-900/20 pointer-events-auto transition-transform hover:scale-110 active:scale-95 flex items-center justify-center"
+          style={{ backgroundColor: 'var(--tw-ring-color, #059669)' }}
         >
           <PlusCircle size={32} />
         </button>

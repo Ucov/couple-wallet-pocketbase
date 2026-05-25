@@ -20,10 +20,10 @@ export default async function CalendarPage() {
 
   // Obtener eventos desde hace 7 días hasta los próximos 60 días
   const past = new Date()
-  past.setDate(past.getDate() - 7)
+  past.setDate(past.getDate() - 365)
   
   const future = new Date()
-  future.setDate(future.getDate() + 60)
+  future.setDate(future.getDate() + 365)
 
   const { data: events } = await supabase
     .from('calendar_events')
