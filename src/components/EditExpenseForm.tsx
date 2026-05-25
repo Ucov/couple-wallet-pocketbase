@@ -18,6 +18,7 @@ type Expense = {
   date: string | null
   created_at: string
   category_id: string | null
+  is_refundable?: boolean
 }
 
 function SubmitButton() {
@@ -106,6 +107,19 @@ export default function EditExpenseForm({
             </label>
           ))}
         </div>
+      </div>
+
+      <div>
+        <label className="flex items-center justify-between p-4 rounded-xl border border-zinc-800 bg-zinc-900 cursor-pointer transition-colors hover:border-emerald-500/50">
+          <div>
+            <span className="block text-sm font-semibold text-white">Es un reembolso / devolución</span>
+            <span className="block text-xs text-zinc-400 mt-1">No se sumará al balance de gastos de la pareja. Útil para compras de Shein, devoluciones, etc.</span>
+          </div>
+          <div className="relative inline-flex items-center ml-4 cursor-pointer">
+            <input type="checkbox" name="is_refundable" className="sr-only peer" defaultChecked={expense.is_refundable} />
+            <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+          </div>
+        </label>
       </div>
 
       {state.error && (

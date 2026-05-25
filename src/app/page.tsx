@@ -30,6 +30,7 @@ interface Expense {
   created_at: string
   paid_by: string
   category_id?: string
+  is_refundable?: boolean
   categories: Category | Category[] | null
 }
 
@@ -107,6 +108,7 @@ export default async function Dashboard({
       created_at, 
       paid_by,
       category_id,
+      is_refundable,
       categories ( name, icon, color )
     `)
     .gte('date', startOfMonth.toISOString())
@@ -133,8 +135,16 @@ export default async function Dashboard({
     isToday: currentMonth === now.getMonth() && currentYear === now.getFullYear() && i + 1 === now.getDate()
   }))
 
+  const refundableExpenses: Expense[] = []
+
   expenses?.forEach(exp => {
     const amount = Number(exp.amount)
+    
+    if (exp.is_refundable) {
+      refundableExpenses.push(exp)
+      return // Skip from balance
+    }
+
     if (exp.paid_by === user.id) {
       myTotal += amount
     } else {
@@ -309,8 +319,56 @@ export default async function Dashboard({
           <h2 className="text-lg font-semibold text-zinc-100">Últimos Gastos</h2>
         </div>
 
+        {refundableExpenses.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-zinc-400 mb-3 uppercase tracking-wider">Reembolsos Pendientes</h3>
+            <div className="space-y-3">
+              {refundableExpenses.map((expense) => {
+                const categories = expense.categories
+                const category = Array.isArray(categories) ? categories[0] : categories
+                return (
+                  <div key={expense.id} className="bg-zinc-900/50 p-4 rounded-xl flex justify-between items-center border border-zinc-800 hover:bg-zinc-800/50 transition-colors group">
+                    <div className="flex gap-3 items-center">
+                      <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-xl shadow-inner border border-zinc-700">
+                        {category?.icon || '📦'}
+                      </div>
+                      <div>
+                        <p className="font-medium text-white flex items-center gap-2">
+                          {expense.concept}
+                          <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full uppercase font-bold tracking-widest border border-zinc-700">Reembolsable</span>
+                        </p>
+                        <p className="text-xs text-zinc-500 mt-0.5">
+                          {new Date(expense.date).toLocaleDateString('es-ES')} • Pendiente de devolución
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right flex items-center gap-2">
+                      <div className="mr-2">
+                        <p className="font-bold text-zinc-300">€{Number(expense.amount).toFixed(2)}</p>
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500 mt-0.5 font-semibold">
+                          {expense.paid_by === user.id ? 'Tú pagaste' : `${partnerName} pagó`}
+                        </p>
+                      </div>
+                      <div className="flex flex-col sm:flex-row opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity gap-1">
+                        <Link href={`/edit/${expense.id}`} className="text-zinc-600 hover:text-emerald-400 transition-colors p-1 bg-zinc-900 rounded-lg border border-zinc-800">
+                          <Pencil size={16} />
+                        </Link>
+                        <DeleteExpenseButton 
+                          id={expense.id} 
+                          concept={expense.concept} 
+                          amount={Number(expense.amount)} 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-3 pb-32">
-          {expenses?.map((expense: Expense) => {
+          {expenses?.filter(e => !e.is_refundable).map((expense: Expense) => {
             const categories = expense.categories
             const category = Array.isArray(categories) ? categories[0] : categories
             return (

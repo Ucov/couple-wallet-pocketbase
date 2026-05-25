@@ -12,6 +12,7 @@ const expenseSchema = z.object({
   concept: z.string().min(1, 'El concepto es obligatorio'),
   category_id: z.string().uuid('Categoría no válida').optional().nullable(),
   date: z.string().min(1, 'La fecha es obligatoria'),
+  is_refundable: z.boolean().optional().default(false),
 })
 
 export async function deleteExpenseAction(
@@ -59,6 +60,7 @@ export async function updateExpenseAction(
     concept: formData.get('concept') as string,
     category_id: formData.get('category_id') as string || null,
     date: formData.get('date') as string,
+    is_refundable: formData.get('is_refundable') === 'on',
   }
 
   const validatedFields = expenseSchema.safeParse(rawData)
@@ -67,7 +69,7 @@ export async function updateExpenseAction(
     return { error: validatedFields.error.issues[0].message }
   }
 
-  const { amount, concept, category_id, date } = validatedFields.data
+  const { amount, concept, category_id, date, is_refundable } = validatedFields.data
 
   const { error } = await supabase
     .from('expenses')
@@ -76,6 +78,7 @@ export async function updateExpenseAction(
       concept,
       category_id,
       date: new Date(date).toISOString(),
+      is_refundable,
     })
     .eq('id', id)
 

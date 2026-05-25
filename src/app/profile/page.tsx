@@ -6,6 +6,7 @@ import ProfileForm from './ProfileForm'
 import CopyCodeButton from './CopyCodeButton'
 import LeaveGroupButton from './LeaveGroupButton'
 import PushNotificationsClient from '@/components/PushNotificationsClient'
+import BackupPanel from './BackupPanel'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,6 +57,12 @@ export default async function ProfilePage() {
             <CopyCodeButton code={joinCode} />
           </div>
           
+          <div className="mt-8 pt-6 border-t border-zinc-800">
+            <h2 className="text-sm text-zinc-400 font-semibold uppercase tracking-wider mb-4">Copia de Seguridad</h2>
+            <p className="text-zinc-500 text-xs mb-4">Exporta o importa todo el historial de gastos y tareas de la pareja. Guarda el archivo .json en un lugar seguro.</p>
+            <BackupPanel />
+          </div>
+
           <div className="mt-8 pt-6 border-t border-zinc-800">
             <LeaveGroupButton />
           </div>

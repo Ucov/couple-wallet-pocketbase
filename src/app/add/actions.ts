@@ -11,6 +11,7 @@ const expenseSchema = z.object({
   category_id: z.string().uuid('Categoría no válida').optional().nullable(),
   date: z.string().min(1, 'La fecha es obligatoria'),
   paid_by_me: z.enum(['true', 'false']),
+  is_refundable: z.boolean().optional().default(false),
 })
 
 export async function addExpense(formData: FormData) {
@@ -26,6 +27,7 @@ export async function addExpense(formData: FormData) {
     category_id: formData.get('category_id') as string || null,
     date: formData.get('date') as string,
     paid_by_me: formData.get('paid_by_me') as 'true' | 'false',
+    is_refundable: formData.get('is_refundable') === 'on',
   }
 
   const validatedFields = expenseSchema.safeParse(rawData)
@@ -35,7 +37,7 @@ export async function addExpense(formData: FormData) {
     redirect(`/add?message=${encodeURIComponent(errorMsg)}`)
   }
 
-  const { amount, concept, category_id, date, paid_by_me } = validatedFields.data
+  const { amount, concept, category_id, date, paid_by_me, is_refundable } = validatedFields.data
 
   // Validar que la fecha no sea futura
   const selectedDate = new Date(date)
@@ -77,6 +79,7 @@ export async function addExpense(formData: FormData) {
     paid_by: finalPaidBy,
     couple_id: profile?.couple_id || null,
     date: new Date(date).toISOString(),
+    is_refundable,
   })
 
   if (error) {
