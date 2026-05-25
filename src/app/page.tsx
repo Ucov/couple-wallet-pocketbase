@@ -10,7 +10,6 @@ import { applyRecurringExpenses } from './recurring-actions'
 import { settleMonth } from './settlement-actions'
 import MonthNavigator from '@/components/MonthNavigator'
 import { leaveCouple } from './setup-couple/actions'
-import FloatingAddButton from '@/components/FloatingAddButton'
 
 // Forzamos que la página sea siempre dinámica y no se guarde en caché
 export const dynamic = 'force-dynamic'
@@ -328,6 +327,14 @@ export default async function Dashboard({
       <section className="flex-1">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-zinc-100">Últimos Gastos</h2>
+          <Link
+            href="/add"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-white shadow-lg transition-all active:scale-95 hover:brightness-110"
+            style={{ backgroundColor: 'var(--accent, #059669)' }}
+          >
+            <PlusCircle size={18} />
+            <span className="text-sm">Añadir</span>
+          </Link>
         </div>
 
         {refundableExpenses.length > 0 && (
@@ -419,13 +426,11 @@ export default async function Dashboard({
           {(!expenses || expenses.length === 0) && (
             <div className="text-center py-12 border-2 border-dashed border-zinc-800 rounded-2xl bg-zinc-900/20">
               <p className="text-zinc-500 font-medium">Aún no hay gastos en este mes.</p>
-              <p className="text-sm text-zinc-600 mt-1">Pulsa el botón + abajo para añadir el primero.</p>
+              <p className="text-sm text-zinc-600 mt-1">Pulsa el botón Añadir para registrar el primero.</p>
             </div>
           )}
         </div>
       </section>
-
-      <FloatingAddButton />
     </main>
   )
 }
