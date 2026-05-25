@@ -53,7 +53,8 @@ export default async function Dashboard({
     .from('profiles')
     .select(`
       couple_id, 
-      name
+      name,
+      split_percentage
     `)
     .eq('id', user.id)
     .single()
@@ -168,6 +169,8 @@ export default async function Dashboard({
     categoryTotals[catId].amount += amount
   })
 
+  const myTotal = myNormalTotal + myRefundableTotal
+  const partnerTotal = partnerNormalTotal + partnerRefundableTotal
   const totalMonth = myTotal + partnerTotal
   const sortedCategories = Object.values(categoryTotals).sort((a, b) => b.amount - a.amount)
 
@@ -218,10 +221,6 @@ export default async function Dashboard({
   let showSettleButton = false
   let debtAmount = 0
   let isOwed = false
-
-  const myTotal = myNormalTotal + myRefundableTotal
-  const partnerTotal = partnerNormalTotal + partnerRefundableTotal
-  const totalMonth = myTotal + partnerTotal
 
   if (userProfile?.couple_id) {
     if (isSettled) {

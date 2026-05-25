@@ -23,7 +23,7 @@ export default function ColorSelector() {
           className={`w-12 h-12 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-md ${
             appColor === color.id ? 'ring-4 ring-offset-2 ring-offset-zinc-900 scale-110' : 'ring-1 ring-white/10'
           }`}
-          style={{ backgroundColor: color.hex, ringColor: color.hex }}
+          style={{ backgroundColor: color.hex, '--tw-ring-color': color.hex } as React.CSSProperties}
           aria-label={`Seleccionar color ${color.name}`}
         >
           {appColor === color.id && <Check className="text-white drop-shadow-md" size={20} strokeWidth={3} />}
