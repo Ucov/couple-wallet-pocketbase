@@ -260,7 +260,7 @@ export default function CalendarClient({ initialEvents, coupleId }: Props) {
       </div>
 
       {/* Botón Añadir Evento */}
-      <div className="fixed bottom-6 right-6 pointer-events-none z-50">
+      <div className="fixed bottom-24 right-6 pointer-events-none z-50">
         <button
           onClick={() => setIsModalOpen(true)}
           className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-full p-4 shadow-xl shadow-emerald-900/20 pointer-events-auto transition-transform hover:scale-110 active:scale-95 flex items-center justify-center"
