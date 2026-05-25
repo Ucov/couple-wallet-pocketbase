@@ -33,6 +33,18 @@ function applyTheme(theme: Theme) {
   const resolved = theme === 'system' ? getSystemTheme() : theme
   document.documentElement.classList.toggle('dark', resolved === 'dark')
   document.documentElement.classList.toggle('light', resolved === 'light')
+
+  // Update theme-color meta tag dynamically to match the background
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]')
+  if (themeColorMeta) {
+    themeColorMeta.setAttribute('content', resolved === 'dark' ? '#09090b' : '#f9fafb')
+  } else {
+    // If Next.js viewport media queries removed the generic one, create it
+    const meta = document.createElement('meta')
+    meta.name = 'theme-color'
+    meta.content = resolved === 'dark' ? '#09090b' : '#f9fafb'
+    document.head.appendChild(meta)
+  }
 }
 
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {
