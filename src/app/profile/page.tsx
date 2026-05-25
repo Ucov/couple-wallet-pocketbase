@@ -7,6 +7,7 @@ import CopyCodeButton from './CopyCodeButton'
 import LeaveGroupButton from './LeaveGroupButton'
 import PushNotificationsClient from '@/components/PushNotificationsClient'
 import BackupPanel from './BackupPanel'
+import ColorSelector from './ColorSelector'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,6 +43,11 @@ export default async function ProfilePage() {
       <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-6 shadow-lg">
         <h2 className="text-sm text-zinc-400 font-semibold uppercase tracking-wider mb-4">Ajustes Personales</h2>
         <ProfileForm initialName={profile?.name || ''} />
+        
+        <div className="mt-8 pt-6 border-t border-zinc-800">
+          <h2 className="text-sm text-zinc-400 font-semibold uppercase tracking-wider mb-4">Color de la App</h2>
+          <ColorSelector />
+        </div>
       </section>
 
       {profile?.couple_id && (

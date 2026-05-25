@@ -71,10 +71,10 @@ export default function ReceiptScanner({ onScanComplete }: ReceiptScannerProps) 
         toast.error('No se encontró ningún importe claro, introduce a mano')
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
-      setStatusText('Error al escanear')
-      toast.error('Falló el reconocimiento óptico')
+      setStatusText('Error al escanear: ' + (error?.message || 'Memoria o red insuficiente'))
+      toast.error('Falló el escáner. Prueba a introducir el importe manualmente.')
     } finally {
       setTimeout(() => {
         setIsScanning(false)

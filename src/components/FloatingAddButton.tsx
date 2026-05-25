@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 
 export default function FloatingAddButton() {
   return (
-    <div className="fixed bottom-24 left-0 right-0 flex justify-center pointer-events-none z-40">
+    <div className="fixed bottom-6 right-6 pointer-events-none z-50">
       <motion.div
         initial={{ opacity: 0, scale: 0.3, y: 40 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}

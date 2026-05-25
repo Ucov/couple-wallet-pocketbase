@@ -8,12 +8,16 @@ interface ThemeContextValue {
   theme: Theme
   setTheme: (t: Theme) => void
   resolvedTheme: 'light' | 'dark'
+  appColor: string
+  setAppColor: (c: string) => void
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
   theme: 'system',
   setTheme: () => {},
   resolvedTheme: 'dark',
+  appColor: 'emerald',
+  setAppColor: () => {}
 })
 
 export function useTheme() {
@@ -34,6 +38,7 @@ function applyTheme(theme: Theme) {
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('system')
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark')
+  const [appColor, setAppColorState] = useState<string>('emerald')
 
   // On mount: read saved preference
   useEffect(() => {
@@ -42,6 +47,15 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     const resolved = saved === 'system' ? getSystemTheme() : saved
     setResolvedTheme(resolved)
     applyTheme(saved)
+
+    // Load App Color
+    const savedColor = localStorage.getItem('cw-color') || 'emerald'
+    setAppColorState(savedColor)
+    if (savedColor !== 'emerald') {
+      document.documentElement.setAttribute('data-color', savedColor)
+    } else {
+      document.documentElement.removeAttribute('data-color')
+    }
 
     // Listen for OS theme changes when mode is 'system'
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
@@ -64,8 +78,18 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     applyTheme(t)
   }
 
+  function setAppColor(color: string) {
+    setAppColorState(color)
+    localStorage.setItem('cw-color', color)
+    if (color !== 'emerald') {
+      document.documentElement.setAttribute('data-color', color)
+    } else {
+      document.documentElement.removeAttribute('data-color')
+    }
+  }
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme, appColor, setAppColor }}>
       {children}
     </ThemeContext.Provider>
   )

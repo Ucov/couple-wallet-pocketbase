@@ -124,8 +124,10 @@ export default async function Dashboard({
   const { data: expenses } = await expensesQuery
 
   // 5. Cálculos del mes actual
-  let myTotal = 0
-  let partnerTotal = 0
+  let myNormalTotal = 0
+  let partnerNormalTotal = 0
+  let myRefundableTotal = 0
+  let partnerRefundableTotal = 0
   const categoryTotals: Record<string, { name: string; amount: number; color: string; icon: string }> = {}
   
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
@@ -142,13 +144,11 @@ export default async function Dashboard({
     
     if (exp.is_refundable) {
       refundableExpenses.push(exp)
-      return // Skip from balance
-    }
-
-    if (exp.paid_by === user.id) {
-      myTotal += amount
+      if (exp.paid_by === user.id) myRefundableTotal += amount
+      else partnerRefundableTotal += amount
     } else {
-      partnerTotal += amount
+      if (exp.paid_by === user.id) myNormalTotal += amount
+      else partnerNormalTotal += amount
     }
 
     const day = new Date(exp.date).getDate()
@@ -219,23 +219,35 @@ export default async function Dashboard({
   let debtAmount = 0
   let isOwed = false
 
+  const myTotal = myNormalTotal + myRefundableTotal
+  const partnerTotal = partnerNormalTotal + partnerRefundableTotal
+  const totalMonth = myTotal + partnerTotal
+
   if (userProfile?.couple_id) {
     if (isSettled) {
       settlementMessage = 'Mes saldado. Todo al día ✅'
     } else {
-      const diff = Math.abs(myTotal - partnerTotal)
-      debtAmount = diff / 2
-      if (myTotal > partnerTotal) {
+      const mySplitPercentage = userProfile?.split_percentage ?? 50
+      
+      const normalTotal = myNormalTotal + partnerNormalTotal
+      const myExpectedNormalShare = normalTotal * (mySplitPercentage / 100)
+      
+      let myBalance = myExpectedNormalShare - myNormalTotal // >0 = I underpaid normal expenses
+      myBalance += partnerRefundableTotal // I owe 100% of their refundable expenses
+      myBalance -= myRefundableTotal // They owe 100% of my refundable expenses
+      
+      debtAmount = Math.abs(myBalance)
+      if (myBalance < 0) { // I overpaid overall
         settlementMessage = 'Te deben un Bizum de:'
         settlementSubMessage = partnerName
         isOwed = true
         showSettleButton = debtAmount > 0
-      } else if (partnerTotal > myTotal) {
+      } else if (myBalance > 0) { // I underpaid overall
         settlementMessage = 'Tienes que hacer un Bizum de:'
         settlementSubMessage = `a ${partnerName}`
         isOwed = false
         showSettleButton = debtAmount > 0
-      } else if (myTotal > 0) {
+      } else if (totalMonth > 0) {
         settlementMessage = 'Estáis completamente en paz 🍻'
       }
     }
