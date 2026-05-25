@@ -42,28 +42,21 @@ export default function ReceiptScanner({ onScanComplete }: ReceiptScannerProps) 
       const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
       
       // Intentar encontrar el importe (TOTAL, IMPORTE, EUROS, etc.)
-      // Buscamos patrones numéricos como 12.34, 12,34, o incluso con símbolos
       let amountFound = ''
-      
-      // Expresión regular para encontrar el total más grande o la línea que dice TOTAL
-      const totalRegex = /(?:total|importe|suma|pago|eur|€|s\/?total)[\s:.-]*([0-9]+[.,][0-9]{2})/i
-      
       let maxAmount = 0
       
       for (const line of lines) {
-        // Primera pasada: buscar etiquetas claras
-        const match = line.match(totalRegex)
-        if (match && match[1]) {
-          const val = parseFloat(match[1].replace(',', '.'))
-          if (val > maxAmount) maxAmount = val
-        }
+        // Limpiar la línea de ruido común del OCR
+        const cleanLine = line.replace(/[^a-zA-Z0-9.,€$:\s]/g, '')
         
-        // Segunda pasada: si es sólo un número al final del ticket
-        const numMatch = line.match(/([0-9]+[.,][0-9]{2})$/)
-        if (numMatch && numMatch[1]) {
-          const val = parseFloat(numMatch[1].replace(',', '.'))
-          // Generalmente el total es el número más alto en el ticket (asumiendo que no hay sub-sumas mayores)
-          if (val > maxAmount) maxAmount = val
+        // 1. Buscar cualquier número con formato de moneda en la línea
+        const numbersInLine = cleanLine.match(/\b\d+[.,]\d{2}\b/g)
+        
+        if (numbersInLine) {
+          for (const numStr of numbersInLine) {
+            const val = parseFloat(numStr.replace(',', '.'))
+            if (val > maxAmount) maxAmount = val
+          }
         }
       }
 
@@ -75,7 +68,7 @@ export default function ReceiptScanner({ onScanComplete }: ReceiptScannerProps) 
         onScanComplete(amountFound, 'Ticket Escaneado')
       } else {
         setStatusText('No se pudo detectar el importe')
-        toast.error('No se encontró ningún importe claro')
+        toast.error('No se encontró ningún importe claro, introduce a mano')
       }
 
     } catch (error) {
