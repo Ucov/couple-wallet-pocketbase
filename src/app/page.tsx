@@ -149,27 +149,27 @@ export default async function Dashboard({
     } else {
       if (exp.paid_by === user.id) myNormalTotal += amount
       else partnerNormalTotal += amount
-    }
 
-    const day = new Date(exp.date).getDate()
-    dailyData[day - 1].amount += amount
+      const day = new Date(exp.date).getDate()
+      dailyData[day - 1].amount += amount
 
-    const categories = exp.categories
-    const category = Array.isArray(categories) ? categories[0] : categories
-    const catId = exp.category_id || 'no-category'
-    if (!categoryTotals[catId]) {
-      categoryTotals[catId] = {
-        name: category?.name || 'Sin categoría',
-        amount: 0,
-        color: category?.color || '#6b7280',
-        icon: category?.icon || '💰'
+      const categories = exp.categories
+      const category = Array.isArray(categories) ? categories[0] : categories
+      const catId = exp.category_id || 'no-category'
+      if (!categoryTotals[catId]) {
+        categoryTotals[catId] = {
+          name: category?.name || 'Sin categoría',
+          amount: 0,
+          color: category?.color || '#6b7280',
+          icon: category?.icon || '💰'
+        }
       }
+      categoryTotals[catId].amount += amount
     }
-    categoryTotals[catId].amount += amount
   })
 
-  const myTotal = myNormalTotal + myRefundableTotal
-  const partnerTotal = partnerNormalTotal + partnerRefundableTotal
+  const myTotal = myNormalTotal
+  const partnerTotal = partnerNormalTotal
   const totalMonth = myTotal + partnerTotal
   const sortedCategories = Object.values(categoryTotals).sort((a, b) => b.amount - a.amount)
 
@@ -338,7 +338,7 @@ export default async function Dashboard({
 
         {refundableExpenses.length > 0 && (
           <div className="mb-6">
-            <h3 className="text-sm font-semibold text-zinc-400 mb-3 uppercase tracking-wider">Reembolsos Pendientes</h3>
+            <h3 className="text-sm font-semibold text-zinc-400 mb-3 uppercase tracking-wider">Deudas Pendientes</h3>
             <div className="space-y-3">
               {refundableExpenses.map((expense) => {
                 const categories = expense.categories
@@ -352,10 +352,10 @@ export default async function Dashboard({
                       <div>
                         <p className="font-medium text-white flex items-center gap-2">
                           {expense.concept}
-                          <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full uppercase font-bold tracking-widest border border-zinc-700">Reembolsable</span>
+                          <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full uppercase font-bold tracking-widest border border-zinc-700">Deuda 100%</span>
                         </p>
                         <p className="text-xs text-zinc-500 mt-0.5">
-                          {new Date(expense.date).toLocaleDateString('es-ES')} • Pendiente de devolución
+                          {new Date(expense.date).toLocaleDateString('es-ES')} • {expense.paid_by === user.id ? 'Pendiente de cobrar' : 'Pendiente de pagar'}
                         </p>
                       </div>
                     </div>

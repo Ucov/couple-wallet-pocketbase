@@ -112,8 +112,8 @@ export default function EditExpenseForm({
       <div>
         <label className="flex items-center justify-between p-4 rounded-xl border border-zinc-800 bg-zinc-900 cursor-pointer transition-colors hover:border-emerald-500/50">
           <div>
-            <span className="block text-sm font-semibold text-white">Es un reembolso / devolución</span>
-            <span className="block text-xs text-zinc-400 mt-1">No se sumará al balance de gastos de la pareja. Útil para compras de Shein, devoluciones, etc.</span>
+            <span className="block text-sm font-semibold text-white">Es una deuda 100% (Adelanto)</span>
+            <span className="block text-xs text-zinc-400 mt-1">Este gasto no se sumará a los gastos de la casa. Se exigirá el pago íntegro a la pareja.</span>
           </div>
           <div className="relative inline-flex items-center ml-4 cursor-pointer">
             <input type="checkbox" name="is_refundable" className="sr-only peer" defaultChecked={expense.is_refundable} />
