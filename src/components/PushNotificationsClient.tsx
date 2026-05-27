@@ -41,19 +41,19 @@ export default function PushNotificationsClient({ coupleId }: { coupleId: string
     }
   }, [])
 
-  const subscribeButtonOnClick = async () => {
+  const subscribeButtonOnClick = () => {
     if (!isSupported) {
       toast.error('Las notificaciones push no están soportadas en este navegador o dispositivo.')
       return
     }
 
     if (!registration) {
-      toast.error('Esperando a que el Service Worker se instale...')
+      toast.error('Esperando a que el Service Worker se instale... Si estás en iPhone, añade la app a la pantalla de inicio primero.')
       return
     }
 
-    try {
-      startTransition(async () => {
+    startTransition(async () => {
+      try {
         if (isSubscribed && subscription) {
           await subscription.unsubscribe()
           await deleteSubscription(subscription.endpoint)
@@ -61,9 +61,15 @@ export default function PushNotificationsClient({ coupleId }: { coupleId: string
           setIsSubscribed(false)
           toast.success('Notificaciones desactivadas')
         } else {
+          const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+          if (!vapidKey) {
+            toast.error('Faltan las claves de seguridad en Vercel. Tienes que configurar NEXT_PUBLIC_VAPID_PUBLIC_KEY en la web de Vercel.')
+            return
+          }
+
           const sub = await registration.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!)
+            applicationServerKey: urlBase64ToUint8Array(vapidKey)
           })
           
           await saveSubscription(JSON.parse(JSON.stringify(sub)))
@@ -71,14 +77,14 @@ export default function PushNotificationsClient({ coupleId }: { coupleId: string
           setIsSubscribed(true)
           toast.success('Notificaciones activadas')
         }
-      })
-    } catch (e: any) {
-      if (Notification.permission === 'denied') {
-        toast.error('Permiso denegado. Actívalo en los ajustes de tu navegador/sistema.')
-      } else {
-        toast.error('Error al suscribirse: ' + e.message)
+      } catch (e: any) {
+        if (Notification.permission === 'denied') {
+          toast.error('Permiso denegado. Actívalo en los ajustes de tu navegador/sistema.')
+        } else {
+          toast.error('Error al suscribirse: ' + e.message)
+        }
       }
-    }
+    })
   }
 
   if (!isSupported) return null
