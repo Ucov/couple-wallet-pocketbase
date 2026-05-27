@@ -30,6 +30,7 @@ interface Expense {
   paid_by: string
   category_id?: string
   is_refundable?: boolean
+  is_transfer?: boolean
   categories: Category | Category[] | null
 }
 
@@ -79,7 +80,7 @@ export default async function Dashboard({
 
   let partnerQuery: any = Promise.resolve({ data: null as any })
   if (userProfile?.couple_id) {
-    partnerQuery = supabase.from('profiles').select('name').eq('couple_id', userProfile.couple_id).neq('id', user.id).maybeSingle()
+    partnerQuery = supabase.from('profiles').select('id, name').eq('couple_id', userProfile.couple_id).neq('id', user.id).maybeSingle()
   }
 
   const applyRecurring = userProfile?.couple_id 
@@ -87,17 +88,14 @@ export default async function Dashboard({
     : Promise.resolve()
 
   let expensesQuery = supabase.from('expenses').select(`
-      id, amount, concept, date, created_at, paid_by, category_id, is_refundable, categories ( name, icon, color )
+      id, amount, concept, date, created_at, paid_by, category_id, is_refundable, is_transfer, categories ( name, icon, color )
     `).gte('date', startOfMonth.toISOString()).lte('date', endOfMonth.toISOString()).order('date', { ascending: false })
 
-  let prevExpensesQuery = supabase.from('expenses').select('amount').gte('date', prevMonthStart.toISOString()).lte('date', prevMonthEnd.toISOString())
-
-  let settlementQuery: any = Promise.resolve({ data: null as any })
+  let prevExpensesQuery = supabase.from('expenses').select('amount').gte('date', prevMonthStart.toISOString()).lte('date', prevMonthEnd.toISOString()).eq('is_transfer', false)
 
   if (userProfile?.couple_id) {
     expensesQuery = expensesQuery.eq('couple_id', userProfile.couple_id)
     prevExpensesQuery = prevExpensesQuery.eq('couple_id', userProfile.couple_id)
-    settlementQuery = supabase.from('settlements').select('id').eq('couple_id', userProfile.couple_id).eq('month', currentMonth).eq('year', currentYear).maybeSingle()
   } else {
     expensesQuery = expensesQuery.eq('paid_by', user.id)
     prevExpensesQuery = prevExpensesQuery.eq('paid_by', user.id)
@@ -107,14 +105,12 @@ export default async function Dashboard({
     { data: partnerData },
     _, // recurring
     { data: expenses },
-    { data: prevExpenses },
-    { data: settlement }
+    { data: prevExpenses }
   ] = await Promise.all([
     partnerQuery,
     applyRecurring,
     expensesQuery,
-    prevExpensesQuery,
-    settlementQuery
+    prevExpensesQuery
   ])
 
   if (partnerData?.name) partnerName = partnerData.name
@@ -124,6 +120,8 @@ export default async function Dashboard({
   let partnerNormalTotal = 0
   let myRefundableTotal = 0
   let partnerRefundableTotal = 0
+  let myTransfersSent = 0
+  let partnerTransfersSent = 0
   const categoryTotals: Record<string, { name: string; amount: number; color: string; icon: string }> = {}
   
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
@@ -138,6 +136,12 @@ export default async function Dashboard({
   expenses?.forEach(exp => {
     const amount = Number(exp.amount)
     
+    if (exp.is_transfer) {
+      if (exp.paid_by === user.id) myTransfersSent += amount
+      else partnerTransfersSent += amount
+      return // No sumarlo a totales normales ni a gráficas
+    }
+
     if (exp.is_refundable) {
       refundableExpenses.push(exp)
       if (exp.paid_by === user.id) myRefundableTotal += amount
@@ -178,12 +182,7 @@ export default async function Dashboard({
     trendPercent = 100
   }
 
-  // 7. Verificar si el mes está saldado
-  let isSettled = false
-  if (settlement) {
-    isSettled = true
-  }
-
+  // 7. Balance y Deudas
   let settlementMessage = 'Sin gastos este mes'
   let settlementSubMessage = ''
   let showSettleButton = false
@@ -191,32 +190,32 @@ export default async function Dashboard({
   let isOwed = false
 
   if (userProfile?.couple_id) {
-    if (isSettled) {
-      settlementMessage = 'Mes saldado. Todo al día ✅'
-    } else {
-      const mySplitPercentage = userProfile?.split_percentage ?? 50
-      
-      const normalTotal = myNormalTotal + partnerNormalTotal
-      const myExpectedNormalShare = normalTotal * (mySplitPercentage / 100)
-      
-      let myBalance = myExpectedNormalShare - myNormalTotal // >0 = I underpaid normal expenses
-      myBalance += partnerRefundableTotal // I owe 100% of their refundable expenses
-      myBalance -= myRefundableTotal // They owe 100% of my refundable expenses
-      
-      debtAmount = Math.abs(myBalance)
-      if (myBalance < 0) { // I overpaid overall
-        settlementMessage = 'Te deben un Bizum de:'
-        settlementSubMessage = partnerName
-        isOwed = true
-        showSettleButton = debtAmount > 0
-      } else if (myBalance > 0) { // I underpaid overall
-        settlementMessage = 'Tienes que hacer un Bizum de:'
-        settlementSubMessage = `a ${partnerName}`
-        isOwed = false
-        showSettleButton = debtAmount > 0
-      } else if (totalMonth > 0) {
-        settlementMessage = 'Estáis completamente en paz 🍻'
-      }
+    const mySplitPercentage = userProfile?.split_percentage ?? 50
+    
+    const normalTotal = myNormalTotal + partnerNormalTotal
+    const myExpectedNormalShare = normalTotal * (mySplitPercentage / 100)
+    
+    let myBalance = myExpectedNormalShare - myNormalTotal // >0 = I underpaid normal expenses
+    myBalance += partnerRefundableTotal // I owe 100% of their refundable expenses
+    myBalance -= myRefundableTotal // They owe 100% of my refundable expenses
+    
+    // Aplicar transferencias internas (Bizums)
+    myBalance -= myTransfersSent // Yo te pagué deuda, así que te debo menos
+    myBalance += partnerTransfersSent // Tú me pagaste deuda, así que te debo más
+    
+    debtAmount = Math.abs(myBalance)
+    if (myBalance < -0.01) { // I overpaid overall
+      settlementMessage = 'Te deben un Bizum de:'
+      settlementSubMessage = partnerName
+      isOwed = true
+      showSettleButton = debtAmount > 0.01
+    } else if (myBalance > 0.01) { // I underpaid overall
+      settlementMessage = 'Tienes que hacer un Bizum de:'
+      settlementSubMessage = `a ${partnerName}`
+      isOwed = false
+      showSettleButton = debtAmount > 0.01
+    } else if (totalMonth > 0 || myTransfersSent > 0 || partnerTransfersSent > 0) {
+      settlementMessage = 'Estáis completamente en paz 🍻'
     }
   }
 
@@ -250,11 +249,11 @@ export default async function Dashboard({
 
       {/* Ajuste de Cuentas (Premium Card) */}
       <section className="mb-8">
-        <div className={`relative overflow-hidden rounded-3xl p-6 shadow-xl border ${debtAmount > 0 && !isOwed && !isSettled ? 'bg-gradient-to-br from-red-950 to-zinc-900 border-red-900/50' : debtAmount > 0 && isOwed && !isSettled ? 'bg-gradient-to-br from-emerald-950 to-zinc-900 border-emerald-900/50' : 'bg-zinc-900 border-zinc-800'}`}>
+        <div className={`relative overflow-hidden rounded-3xl p-6 shadow-xl border ${debtAmount > 0.01 && !isOwed ? 'bg-gradient-to-br from-red-950 to-zinc-900 border-red-900/50' : debtAmount > 0.01 && isOwed ? 'bg-gradient-to-br from-emerald-950 to-zinc-900 border-emerald-900/50' : 'bg-zinc-900 border-zinc-800'}`}>
           <div className="relative z-10 flex flex-col justify-center items-center text-center">
             <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-400 mb-2">Balance Mensual</h2>
             <p className="text-zinc-300 font-medium mb-1">{settlementMessage}</p>
-            {debtAmount > 0 && !isSettled && (
+            {debtAmount > 0.01 && (
               <div className="flex flex-col items-center justify-center mt-2 mb-4">
                 <span className={`text-5xl font-black ${isOwed ? 'text-emerald-400' : 'text-red-400'} tracking-tighter`}>
                   €{debtAmount.toFixed(2)}
@@ -263,8 +262,8 @@ export default async function Dashboard({
               </div>
             )}
             
-            {showSettleButton && userProfile?.couple_id && (
-              <form action={settleMonth.bind(null, userProfile.couple_id, currentMonth, currentYear)} className="mt-4 w-full">
+            {showSettleButton && userProfile?.couple_id && partnerData?.id && (
+              <form action={settleMonth.bind(null, userProfile.couple_id, currentMonth, currentYear, debtAmount, isOwed ? partnerData.id : user.id)} className="mt-4 w-full">
                 <button 
                   type="submit" 
                   className={`w-full py-3 rounded-xl font-bold shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${isOwed ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/50' : 'bg-red-600 hover:bg-red-500 text-white shadow-red-900/50'}`}
@@ -355,6 +354,42 @@ export default async function Dashboard({
 
         <div className="space-y-3 pb-32">
           {expenses?.filter(e => !e.is_refundable).map((expense: Expense) => {
+            if (expense.is_transfer) {
+              return (
+                <div key={expense.id} className="bg-zinc-900/50 p-4 rounded-xl flex justify-between items-center border border-purple-900/30 hover:bg-zinc-800/50 transition-colors group">
+                  <div className="flex gap-3 items-center">
+                    <div className="w-10 h-10 rounded-full bg-purple-950/50 flex items-center justify-center text-xl shadow-inner border border-purple-800/50 text-purple-400">
+                      💸
+                    </div>
+                    <div>
+                      <p className="font-medium text-purple-300 flex items-center gap-2">
+                        {expense.concept}
+                        <span className="text-[10px] bg-purple-950 text-purple-400 px-2 py-0.5 rounded-full uppercase font-bold tracking-widest border border-purple-800">Bizum</span>
+                      </p>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        {new Date(expense.date).toLocaleDateString('es-ES')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right flex items-center gap-2">
+                    <div className="mr-2">
+                      <p className="font-bold text-purple-300">€{Number(expense.amount).toFixed(2)}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-purple-500 mt-0.5 font-semibold">
+                        {expense.paid_by === user.id ? 'Tú enviaste' : `${partnerName} envió`}
+                      </p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity gap-1">
+                      <DeleteExpenseButton 
+                        id={expense.id} 
+                        concept={expense.concept} 
+                        amount={Number(expense.amount)} 
+                      />
+                    </div>
+                  </div>
+                </div>
+              )
+            }
+
             const categories = expense.categories
             const category = Array.isArray(categories) ? categories[0] : categories
             return (
