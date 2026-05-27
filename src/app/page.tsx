@@ -68,60 +68,56 @@ export default async function Dashboard({
 
   const myName = userProfile?.name || user.email?.split('@')[0] || 'Usuario'
   let partnerName = 'Pareja'
-  
-  const { data: partnerData } = await supabase
-    .from('profiles')
-    .select('name')
-    .eq('couple_id', userProfile.couple_id)
-    .neq('id', user.id)
-    .maybeSingle()
-  
-  if (partnerData?.name) {
-    partnerName = partnerData.name;
-  }
 
-  // 3. Manejo de fechas y gastos recurrentes
   const now = new Date()
-  
-  if (userProfile?.couple_id) {
-    try {
-      await applyRecurringExpenses(userProfile.couple_id, now.getMonth(), now.getFullYear(), false)
-    } catch (e) {
-      console.error('Error applying recurring expenses:', e)
-    }
-  }
-
   const currentMonth = month ? parseInt(month) : now.getMonth()
   const currentYear = year ? parseInt(year) : now.getFullYear()
-  
   const startOfMonth = new Date(currentYear, currentMonth, 1)
   const endOfMonth = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59)
+  const prevMonthStart = new Date(currentYear, currentMonth - 1, 1)
+  const prevMonthEnd = new Date(currentYear, currentMonth, 0, 23, 59, 59)
 
-  // 4. Obtener gastos del mes seleccionado
-  let expensesQuery = supabase
-    .from('expenses')
-    .select(`
-      id, 
-      amount, 
-      concept, 
-      date, 
-      created_at, 
-      paid_by,
-      category_id,
-      is_refundable,
-      categories ( name, icon, color )
-    `)
-    .gte('date', startOfMonth.toISOString())
-    .lte('date', endOfMonth.toISOString())
-    .order('date', { ascending: false })
+  let partnerQuery = Promise.resolve({ data: null as any })
+  if (userProfile?.couple_id) {
+    partnerQuery = supabase.from('profiles').select('name').eq('couple_id', userProfile.couple_id).neq('id', user.id).maybeSingle()
+  }
+
+  const applyRecurring = userProfile?.couple_id 
+    ? applyRecurringExpenses(userProfile.couple_id, now.getMonth(), now.getFullYear(), false).catch(e => console.error(e))
+    : Promise.resolve()
+
+  let expensesQuery = supabase.from('expenses').select(`
+      id, amount, concept, date, created_at, paid_by, category_id, is_refundable, categories ( name, icon, color )
+    `).gte('date', startOfMonth.toISOString()).lte('date', endOfMonth.toISOString()).order('date', { ascending: false })
+
+  let prevExpensesQuery = supabase.from('expenses').select('amount').gte('date', prevMonthStart.toISOString()).lte('date', prevMonthEnd.toISOString())
+
+  let settlementQuery = Promise.resolve({ data: null as any })
 
   if (userProfile?.couple_id) {
     expensesQuery = expensesQuery.eq('couple_id', userProfile.couple_id)
+    prevExpensesQuery = prevExpensesQuery.eq('couple_id', userProfile.couple_id)
+    settlementQuery = supabase.from('settlements').select('id').eq('couple_id', userProfile.couple_id).eq('month', currentMonth).eq('year', currentYear).maybeSingle()
   } else {
     expensesQuery = expensesQuery.eq('paid_by', user.id)
+    prevExpensesQuery = prevExpensesQuery.eq('paid_by', user.id)
   }
 
-  const { data: expenses } = await expensesQuery
+  const [
+    { data: partnerData },
+    _, // recurring
+    { data: expenses },
+    { data: prevExpenses },
+    { data: settlement }
+  ] = await Promise.all([
+    partnerQuery,
+    applyRecurring,
+    expensesQuery,
+    prevExpensesQuery,
+    settlementQuery
+  ])
+
+  if (partnerData?.name) partnerName = partnerData.name
 
   // 5. Cálculos del mes actual
   let myNormalTotal = 0
@@ -173,23 +169,6 @@ export default async function Dashboard({
   const totalMonth = myTotal + partnerTotal
   const sortedCategories = Object.values(categoryTotals).sort((a, b) => b.amount - a.amount)
 
-  // 6. Obtener gastos del mes anterior para comparativa
-  const prevMonthStart = new Date(currentYear, currentMonth - 1, 1)
-  const prevMonthEnd = new Date(currentYear, currentMonth, 0, 23, 59, 59)
-  
-  let prevExpensesQuery = supabase
-    .from('expenses')
-    .select('amount')
-    .gte('date', prevMonthStart.toISOString())
-    .lte('date', prevMonthEnd.toISOString())
-    
-  if (userProfile?.couple_id) {
-    prevExpensesQuery = prevExpensesQuery.eq('couple_id', userProfile.couple_id)
-  } else {
-    prevExpensesQuery = prevExpensesQuery.eq('paid_by', user.id)
-  }
-  
-  const { data: prevExpenses } = await prevExpensesQuery
   const prevTotal = prevExpenses?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
   
   let trendPercent = 0
@@ -201,18 +180,8 @@ export default async function Dashboard({
 
   // 7. Verificar si el mes está saldado
   let isSettled = false
-  if (userProfile?.couple_id) {
-    const { data: settlement } = await supabase
-      .from('settlements')
-      .select('id')
-      .eq('couple_id', userProfile.couple_id)
-      .eq('month', currentMonth)
-      .eq('year', currentYear)
-      .maybeSingle()
-    
-    if (settlement) {
-      isSettled = true
-    }
+  if (settlement) {
+    isSettled = true
   }
 
   let settlementMessage = 'Sin gastos este mes'
