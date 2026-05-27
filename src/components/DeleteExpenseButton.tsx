@@ -5,7 +5,7 @@ import { useFormStatus } from 'react-dom'
 import { Trash2 } from 'lucide-react'
 import { deleteExpenseAction, type ActionState } from '@/app/expense-actions'
 
-const initialState: ActionState = { error: null }
+const initialState: ActionState = { error: null, timestamp: 0 }
 
 function SubmitButton({ onSubmit }: { onSubmit: () => void }) {
   const { pending } = useFormStatus()
@@ -45,11 +45,16 @@ export default function DeleteExpenseButton({
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
-  // Cerrar el modal solo si el action terminó con éxito (error===null) Y el usuario lo había enviado
+  // Cerrar el modal solo si el action terminó con éxito
   useEffect(() => {
-    if (submittedRef.current && state.error === null) {
-      setOpen(false)
-      submittedRef.current = false
+    if (submittedRef.current && state.timestamp && state.timestamp > 0) {
+      if (state.error === null) {
+        setOpen(false)
+        submittedRef.current = false
+      } else {
+        // Si hay error, quitamos el submittedRef para que el usuario lo vea
+        submittedRef.current = false
+      }
     }
   }, [state])
 

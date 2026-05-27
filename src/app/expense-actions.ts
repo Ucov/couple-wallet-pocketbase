@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 
-export type ActionState = { error: string | null }
+export type ActionState = { error: string | null, timestamp?: number }
 
 const expenseSchema = z.object({
   amount: z.number().positive('La cantidad debe ser mayor a 0'),
@@ -27,22 +27,28 @@ export async function deleteExpenseAction(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('expenses')
     .delete()
     .eq('id', id)
+    .select('id')
 
   if (error) {
     console.error('Error deleting expense:', error)
     return { 
       error: error.code === 'PGRST116'
         ? 'No se pudo eliminar el gasto (no existe o no tienes permiso)'
-        : error.message 
+        : error.message,
+      timestamp: Date.now()
     }
   }
 
+  if (!data || data.length === 0) {
+    return { error: 'No tienes permiso para borrar este gasto (solo quien lo pagó puede borrarlo).', timestamp: Date.now() }
+  }
+
   revalidatePath('/')
-  return { error: null }
+  return { error: null, timestamp: Date.now() }
 }
 
 export async function updateExpenseAction(
