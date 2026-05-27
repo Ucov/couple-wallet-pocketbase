@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useTransition, useEffect, useMemo } from 'react'
-import { PlusCircle, Trash2, User, X } from 'lucide-react'
-import { addChore, toggleChoreStatus, assignChore, deleteChore } from './actions'
+import { PlusCircle, Trash2, X } from 'lucide-react'
+import { addChore, toggleChoreStatus, deleteChore } from './actions'
 import { createClient } from '@/utils/supabase/client'
 import { getChoreIcon } from '@/utils/choreIcons'
 
@@ -80,29 +80,6 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
     })
   }
 
-  const handleAssign = (e: React.MouseEvent, id: string, currentAssigned: string | null) => {
-    e.stopPropagation()
-    
-    // Si ya está asignada a la pareja, no permitir quitársela (solo puedes asignarte tareas a ti mismo)
-    if (currentAssigned && currentAssigned !== currentUserId) {
-      return
-    }
-
-    let nextAssigned: string | null = null
-    if (currentAssigned === currentUserId) {
-      nextAssigned = null
-    } else {
-      nextAssigned = currentUserId
-    }
-
-    setChores(prev => prev.map(c => c.id === id ? { ...c, assigned_to: nextAssigned } : c))
-    startTransition(async () => { 
-      const res = await assignChore(id, nextAssigned)
-      if (res?.error) alert('Error: ' + res.error)
-      else broadcastSync()
-    })
-  }
-
   const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
     setChores(prev => prev.filter(c => c.id !== id))
@@ -111,16 +88,6 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
       if (res?.error) alert('Error: ' + res.error)
       else broadcastSync()
     })
-  }
-
-  const renderAssigneeBadge = (assigned_to: string | null) => {
-    if (assigned_to === currentUserId) return (
-      <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-md font-bold leading-none">{currentUserName.split(' ')[0]}</span>
-    )
-    if (assigned_to === partnerId) return (
-      <span className="text-[10px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded-md font-bold leading-none">{partnerName.split(' ')[0]}</span>
-    )
-    return null
   }
 
   return (
@@ -171,15 +138,7 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
                   <span className="text-[12px] font-semibold text-center leading-tight text-white line-clamp-2">
                     {chore.title}
                   </span>
-                  {/* Badge de asignación */}
-                  <button
-                    onClick={(e) => handleAssign(e, chore.id, chore.assigned_to)}
-                    className="mt-1.5"
-                  >
-                    {renderAssigneeBadge(chore.assigned_to) || (
-                      <span className="text-[10px] text-emerald-200/60 flex items-center gap-0.5"><User size={10}/></span>
-                    )}
-                  </button>
+
                 </div>
               )
             })}

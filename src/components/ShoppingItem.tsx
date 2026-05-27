@@ -21,9 +21,7 @@ export default function ShoppingItem({ id, name, status, onUpdate, onToggle, onD
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (window.confirm('¿Eliminar este artículo del historial definitivamente?')) {
-      onDelete?.(id)
-    }
+    onDelete?.(id)
   }
 
   const Icon = getGroceryIcon(name)
