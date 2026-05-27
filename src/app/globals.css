@@ -23,6 +23,26 @@ html.dark {
   --text-subtle:   #71717a; /* zinc-500 */
   --text-dim:      #52525b; /* zinc-600 */
   --input-bg:      #09090b; /* zinc-950 */
+
+  /* Shadcn Variables */
+  --background: var(--bg-base);
+  --foreground: var(--text-primary);
+  --card: var(--bg-card);
+  --card-foreground: var(--text-primary);
+  --popover: var(--bg-card);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--text-primary);
+  --primary-foreground: var(--bg-base);
+  --secondary: var(--bg-elevated);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--bg-elevated);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--bg-elevated);
+  --accent-foreground: var(--text-primary);
+  --destructive: #7f1d1d;
+  --destructive-foreground: #f87171;
+  --ring: var(--text-muted);
+  --radius: 0.5rem;
 }
 
 html.light {
@@ -41,6 +61,26 @@ html.light {
   --text-subtle:   #6b7280; /* gray-500 */
   --text-dim:      #4b5563; /* gray-600 */
   --input-bg:      #f9fafb;
+
+  /* Shadcn Variables */
+  --background: var(--bg-base);
+  --foreground: var(--text-primary);
+  --card: var(--bg-card);
+  --card-foreground: var(--text-primary);
+  --popover: var(--bg-card);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--text-primary);
+  --primary-foreground: var(--bg-base);
+  --secondary: var(--bg-elevated);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--bg-elevated);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--bg-elevated);
+  --accent-foreground: var(--text-primary);
+  --destructive: #fee2e2;
+  --destructive-foreground: #b91c1c;
+  --ring: var(--text-muted);
+  --radius: 0.5rem;
 }
 
 /* ============================================================
@@ -117,6 +157,26 @@ html.light [class*="bg-zinc-900"][class*="border"] {
 @theme inline {
   --color-background: var(--bg-base);
   --color-foreground: var(--text-primary);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-ring: var(--ring);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

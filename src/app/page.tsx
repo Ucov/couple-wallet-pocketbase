@@ -11,6 +11,12 @@ import { settleMonth } from './settlement-actions'
 import MonthNavigator from '@/components/MonthNavigator'
 import { leaveCouple } from './setup-couple/actions'
 
+import HeroBalanceCard from '@/components/dashboard/HeroBalanceCard'
+import ExpenseAreaChart from '@/components/dashboard/ExpenseAreaChart'
+import CategoryDistribution from '@/components/dashboard/CategoryDistribution'
+import SwipeableExpenseItem from '@/components/dashboard/SwipeableExpenseItem'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
 // Forzamos que la página sea siempre dinámica y no se guarde en caché
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -125,15 +131,23 @@ export default async function Dashboard({
   const categoryTotals: Record<string, { name: string; amount: number; color: string; icon: string }> = {}
   
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
-  const dailyData = Array.from({ length: daysInMonth }, (_, i) => ({
+  const dailyData: any[] = Array.from({ length: daysInMonth }, (_, i) => ({
     day: String(i + 1),
-    amount: 0,
+    [myName]: 0,
+    [partnerName]: 0,
     isToday: currentMonth === now.getMonth() && currentYear === now.getFullYear() && i + 1 === now.getDate()
   }))
 
   const refundableExpenses: Expense[] = []
 
-  expenses?.forEach(exp => {
+  // Accumulativo para el AreaChart
+  let myCumulative = 0
+  let partnerCumulative = 0
+
+  // Aseguramos que los gastos están ordenados del más antiguo al más reciente para la suma acumulativa
+  const sortedExpensesAsc = [...(expenses || [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+  sortedExpensesAsc?.forEach(exp => {
     const amount = Number(exp.amount)
     
     if (exp.is_transfer) {
@@ -147,11 +161,17 @@ export default async function Dashboard({
       if (exp.paid_by === user.id) myRefundableTotal += amount
       else partnerRefundableTotal += amount
     } else {
-      if (exp.paid_by === user.id) myNormalTotal += amount
-      else partnerNormalTotal += amount
+      if (exp.paid_by === user.id) {
+        myNormalTotal += amount
+        myCumulative += amount
+      } else {
+        partnerNormalTotal += amount
+        partnerCumulative += amount
+      }
 
       const day = new Date(exp.date).getDate()
-      dailyData[day - 1].amount += amount
+      dailyData[day - 1][myName] = myCumulative
+      dailyData[day - 1][partnerName] = partnerCumulative
 
       const categories = exp.categories
       const category = Array.isArray(categories) ? categories[0] : categories
@@ -167,6 +187,16 @@ export default async function Dashboard({
       categoryTotals[catId].amount += amount
     }
   })
+
+  // Rellenar días sin gastos para el gráfico acumulativo
+  for (let i = 1; i < dailyData.length; i++) {
+    if (dailyData[i][myName] === 0 && dailyData[i - 1][myName] > 0) {
+      dailyData[i][myName] = dailyData[i - 1][myName]
+    }
+    if (dailyData[i][partnerName] === 0 && dailyData[i - 1][partnerName] > 0) {
+      dailyData[i][partnerName] = dailyData[i - 1][partnerName]
+    }
+  }
 
   const myTotal = myNormalTotal
   const partnerTotal = partnerNormalTotal
@@ -222,216 +252,112 @@ export default async function Dashboard({
   const monthName = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(startOfMonth)
 
   return (
-    <main className="w-full max-w-md mx-auto p-4 flex flex-col min-h-screen">
-      <header className="flex justify-between items-center py-6 mb-2">
-        <div>
-          <h1 className="text-2xl font-bold">CoupleWallet</h1>
-          <p className="text-xs text-zinc-500 font-medium uppercase tracking-widest mt-1">
-            Hola, {myName}
-          </p>
+    <main className="w-full max-w-md mx-auto p-4 flex flex-col min-h-screen pb-24">
+      <header className="flex justify-between items-center py-4 mb-2">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold shadow-inner border border-emerald-500/30">
+            {myName.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-zinc-100">CoupleWallet</h1>
+            <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-widest mt-0.5">
+              Hola, {myName}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <Link href="/recurring" className="text-zinc-400 hover:text-emerald-400 transition-colors" title="Gastos Fijos">
-            <Repeat size={20} />
+        <div className="flex items-center gap-3 bg-zinc-900/50 p-1.5 rounded-full border border-zinc-800">
+          <Link href="/recurring" className="p-2 rounded-full text-zinc-400 hover:text-emerald-400 hover:bg-zinc-800 transition-all" title="Gastos Fijos">
+            <Repeat size={18} />
           </Link>
           <form action={logout}>
-            <button className="text-zinc-400 hover:text-red-400 transition-colors" title="Cerrar sesión">
-              <LogOut size={20} />
+            <button className="p-2 rounded-full text-zinc-400 hover:text-red-400 hover:bg-zinc-800 transition-all" title="Cerrar sesión">
+              <LogOut size={18} />
             </button>
           </form>
         </div>
       </header>
 
-      <MonthNavigator currentMonth={currentMonth} currentYear={currentYear} monthName={monthName} />
+      <div className="mb-4">
+        <MonthNavigator currentMonth={currentMonth} currentYear={currentYear} monthName={monthName} />
+      </div>
 
-      {/* Gráfico de Barras Diario */}
-      <DailyBarChart data={dailyData} total={totalMonth} trendPercent={trendPercent} />
-
-      {/* Ajuste de Cuentas (Premium Card) */}
-      <section className="mb-8">
-        <div className={`relative overflow-hidden rounded-3xl p-6 shadow-xl border ${debtAmount > 0.01 && !isOwed ? 'bg-gradient-to-br from-red-950 to-zinc-900 border-red-900/50' : debtAmount > 0.01 && isOwed ? 'bg-gradient-to-br from-emerald-950 to-zinc-900 border-emerald-900/50' : 'bg-zinc-900 border-zinc-800'}`}>
-          <div className="relative z-10 flex flex-col justify-center items-center text-center">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-400 mb-2">Balance Mensual</h2>
-            <p className="text-zinc-300 font-medium mb-1">{settlementMessage}</p>
-            {debtAmount > 0.01 && (
-              <div className="flex flex-col items-center justify-center mt-2 mb-4">
-                <span className={`text-5xl font-black ${isOwed ? 'text-emerald-400' : 'text-red-400'} tracking-tighter`}>
-                  €{debtAmount.toFixed(2)}
-                </span>
-                <span className="text-zinc-500 mt-1">{settlementSubMessage}</span>
-              </div>
-            )}
-            
-            {showSettleButton && userProfile?.couple_id && partnerData?.id && (
-              <form action={settleMonth.bind(null, userProfile.couple_id, currentMonth, currentYear, debtAmount, isOwed ? partnerData.id : user.id)} className="mt-4 w-full">
-                <button 
-                  type="submit" 
-                  className={`w-full py-3 rounded-xl font-bold shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${isOwed ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/50' : 'bg-red-600 hover:bg-red-500 text-white shadow-red-900/50'}`}
-                >
-                  <CheckCircle size={20} /> 
-                  Saldar Mes
-                </button>
-              </form>
-            )}
-            
-            <div className="flex justify-between w-full mt-6 pt-6 border-t border-zinc-800/50 text-sm">
-              <div className="flex flex-col items-start">
-                <span className="text-zinc-500">Tú pagaste</span>
-                <span className="text-lg font-semibold text-zinc-200">€{myTotal.toFixed(2)}</span>
-              </div>
-              <div className="flex flex-col items-end">
-                <span className="text-zinc-500">{partnerName} pagó</span>
-                <span className="text-lg font-semibold text-zinc-200">€{partnerTotal.toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      <section className="mb-6">
+        <HeroBalanceCard 
+          debtAmount={debtAmount}
+          isOwed={isOwed}
+          settlementMessage={settlementMessage}
+          settlementSubMessage={settlementSubMessage}
+          showSettleButton={showSettleButton}
+          myTotal={myTotal}
+          partnerTotal={partnerTotal}
+          partnerName={partnerName}
+          settleAction={userProfile?.couple_id && partnerData?.id ? settleMonth.bind(null, userProfile.couple_id, currentMonth, currentYear, debtAmount, isOwed ? partnerData.id : user.id) : undefined}
+        />
       </section>
 
-      {/* Resumen por Categorías (Progreso) */}
-      <CategoryProgressList categories={sortedCategories} total={totalMonth} />
+      <section className="mb-6">
+        <Tabs defaultValue="evolucion" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-zinc-900/50 border border-zinc-800 p-1 mb-4 rounded-xl">
+            <TabsTrigger value="evolucion" className="rounded-lg data-[state=active]:bg-zinc-800 data-[state=active]:text-emerald-400">Evolución</TabsTrigger>
+            <TabsTrigger value="categorias" className="rounded-lg data-[state=active]:bg-zinc-800 data-[state=active]:text-emerald-400">Categorías</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="evolucion" className="bg-zinc-900/40 border border-zinc-800/50 rounded-3xl p-4 shadow-lg backdrop-blur-sm">
+            <div className="flex items-end justify-between px-2 mb-2">
+              <div>
+                <p className="text-xs text-zinc-500 uppercase tracking-widest font-semibold">Total Gastado</p>
+                <h3 className="text-2xl font-bold text-zinc-100 mt-1">€{totalMonth.toFixed(2)}</h3>
+              </div>
+              <div className={`text-sm font-semibold flex items-center px-2 py-1 rounded-full ${trendPercent <= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                {trendPercent <= 0 ? '↓' : '↑'} {Math.abs(trendPercent).toFixed(0)}%
+              </div>
+            </div>
+            <ExpenseAreaChart data={dailyData} myName={myName} partnerName={partnerName} />
+          </TabsContent>
+          
+          <TabsContent value="categorias" className="bg-zinc-900/40 border border-zinc-800/50 rounded-3xl p-4 shadow-lg backdrop-blur-sm">
+            <CategoryDistribution categories={sortedCategories} total={totalMonth} />
+          </TabsContent>
+        </Tabs>
+      </section>
 
-      {/* Lista de Gastos */}
       <section className="flex-1">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-zinc-100">Últimos Gastos</h2>
+        <div className="flex justify-between items-center mb-5 px-1">
+          <h2 className="text-lg font-bold text-zinc-100 tracking-tight">Últimos Movimientos</h2>
           <Link
             href="/add"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-white shadow-lg transition-all active:scale-95 hover:brightness-110 bg-emerald-600 hover:bg-emerald-500"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full font-semibold text-zinc-950 bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-transform active:scale-95"
           >
             <PlusCircle size={18} />
             <span className="text-sm">Añadir</span>
           </Link>
         </div>
 
-        {refundableExpenses.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-sm font-semibold text-zinc-400 mb-3 uppercase tracking-wider">Deudas Pendientes</h3>
-            <div className="space-y-3">
-              {refundableExpenses.map((expense) => {
-                const categories = expense.categories
-                const category = Array.isArray(categories) ? categories[0] : categories
-                return (
-                  <div key={expense.id} className="bg-zinc-900/50 p-4 rounded-xl flex justify-between items-center border border-zinc-800 hover:bg-zinc-800/50 transition-colors group">
-                    <div className="flex gap-3 items-center">
-                      <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-xl shadow-inner border border-zinc-700">
-                        {category?.icon || '📦'}
-                      </div>
-                      <div>
-                        <p className="font-medium text-white flex items-center gap-2">
-                          {expense.concept}
-                          <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full uppercase font-bold tracking-widest border border-zinc-700">Deuda 100%</span>
-                        </p>
-                        <p className="text-xs text-zinc-500 mt-0.5">
-                          {new Date(expense.date).toLocaleDateString('es-ES')} • {expense.paid_by === user.id ? 'Pendiente de cobrar' : 'Pendiente de pagar'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right flex items-center gap-2">
-                      <div className="mr-2">
-                        <p className="font-bold text-zinc-300">€{Number(expense.amount).toFixed(2)}</p>
-                        <p className="text-[10px] uppercase tracking-wider text-zinc-500 mt-0.5 font-semibold">
-                          {expense.paid_by === user.id ? 'Tú pagaste' : `${partnerName} pagó`}
-                        </p>
-                      </div>
-                      <div className="flex flex-col sm:flex-row opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity gap-1">
-                        <Link href={`/edit/${expense.id}`} className="text-zinc-600 hover:text-emerald-400 transition-colors p-1 bg-zinc-900 rounded-lg border border-zinc-800">
-                          <Pencil size={16} />
-                        </Link>
-                        <DeleteExpenseButton 
-                          id={expense.id} 
-                          concept={expense.concept} 
-                          amount={Number(expense.amount)} 
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
+        <div className="space-y-0 relative">
+          {(!expenses || expenses.length === 0) && (
+            <div className="text-center py-12 border-2 border-dashed border-zinc-800/60 rounded-3xl bg-zinc-900/20">
+              <p className="text-zinc-500 font-medium">No hay movimientos.</p>
             </div>
-          </div>
-        )}
-
-        <div className="space-y-3 pb-32">
-          {expenses?.filter(e => !e.is_refundable).map((expense: Expense) => {
-            if (expense.is_transfer) {
-              return (
-                <div key={expense.id} className="bg-zinc-900/50 p-4 rounded-xl flex justify-between items-center border border-purple-900/30 hover:bg-zinc-800/50 transition-colors group">
-                  <div className="flex gap-3 items-center">
-                    <div className="w-10 h-10 rounded-full bg-purple-950/50 flex items-center justify-center text-xl shadow-inner border border-purple-800/50 text-purple-400">
-                      💸
-                    </div>
-                    <div>
-                      <p className="font-medium text-purple-300 flex items-center gap-2">
-                        {expense.concept}
-                        <span className="text-[10px] bg-purple-950 text-purple-400 px-2 py-0.5 rounded-full uppercase font-bold tracking-widest border border-purple-800">Bizum</span>
-                      </p>
-                      <p className="text-xs text-zinc-500 mt-0.5">
-                        {new Date(expense.date).toLocaleDateString('es-ES')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right flex items-center gap-2">
-                    <div className="mr-2">
-                      <p className="font-bold text-purple-300">€{Number(expense.amount).toFixed(2)}</p>
-                      <p className="text-[10px] uppercase tracking-wider text-purple-500 mt-0.5 font-semibold">
-                        {expense.paid_by === user.id ? 'Tú enviaste' : `${partnerName} envió`}
-                      </p>
-                    </div>
-                    <div className="flex flex-col sm:flex-row opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity gap-1">
-                      <DeleteExpenseButton 
-                        id={expense.id} 
-                        concept={expense.concept} 
-                        amount={Number(expense.amount)} 
-                      />
-                    </div>
-                  </div>
-                </div>
-              )
-            }
-
+          )}
+          
+          {expenses?.map((expense: Expense) => {
             const categories = expense.categories
             const category = Array.isArray(categories) ? categories[0] : categories
             return (
-              <div key={expense.id} className="bg-zinc-900/50 p-4 rounded-xl flex justify-between items-center border border-zinc-800/50 hover:bg-zinc-800/50 transition-colors group">
-                <div className="flex gap-3 items-center">
-                  <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-xl shadow-inner">
-                    {category?.icon || '💰'}
-                  </div>
-                  <div>
-                    <p className="font-medium text-zinc-200">{expense.concept}</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">
-                      {new Date(expense.date).toLocaleDateString('es-ES')} • {category?.name || 'General'}
-                    </p>
-                  </div>
-                </div>
-              <div className="text-right flex items-center gap-2">
-                <div className="mr-2">
-                  <p className="font-bold text-zinc-100">€{Number(expense.amount).toFixed(2)}</p>
-                  <p className="text-[10px] uppercase tracking-wider text-zinc-500 mt-0.5 font-semibold">
-                    {expense.paid_by === user.id ? 'Tú' : partnerName}
-                  </p>
-                </div>
-                <div className="flex flex-col sm:flex-row opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity gap-1">
-                  <Link href={`/edit/${expense.id}`} className="text-zinc-600 hover:text-emerald-400 transition-colors p-1 bg-zinc-900 rounded-lg border border-zinc-800">
-                    <Pencil size={16} />
-                  </Link>
-                  <DeleteExpenseButton 
-                    id={expense.id} 
-                    concept={expense.concept} 
-                    amount={Number(expense.amount)} 
-                  />
-                </div>
-              </div>
-            </div>
-          )
-        })}
-          {(!expenses || expenses.length === 0) && (
-            <div className="text-center py-12 border-2 border-dashed border-zinc-800 rounded-2xl bg-zinc-900/20">
-              <p className="text-zinc-500 font-medium">Aún no hay gastos en este mes.</p>
-              <p className="text-sm text-zinc-600 mt-1">Pulsa el botón Añadir para registrar el primero.</p>
-            </div>
-          )}
+              <SwipeableExpenseItem
+                key={expense.id}
+                id={expense.id}
+                concept={expense.concept}
+                amount={Number(expense.amount)}
+                date={expense.date}
+                paidByStr={expense.paid_by === user.id ? 'Tú' : partnerName}
+                categoryName={category?.name || 'General'}
+                categoryIcon={category?.icon || '💰'}
+                isRefundable={expense.is_refundable}
+                isTransfer={expense.is_transfer}
+              />
+            )
+          })}
         </div>
       </section>
     </main>
