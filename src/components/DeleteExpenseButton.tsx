@@ -76,7 +76,7 @@ export default function DeleteExpenseButton({
 
       {open && (
         <div
-          className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+          className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-start justify-center pt-[20vh] p-4 cursor-pointer"
           onClick={(e) => {
             if (e.target === e.currentTarget) setOpen(false)
           }}
