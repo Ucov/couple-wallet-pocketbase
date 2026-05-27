@@ -76,12 +76,12 @@ export default function DeleteExpenseButton({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+          className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
           onClick={(e) => {
             if (e.target === e.currentTarget) setOpen(false)
           }}
         >
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-sm shadow-xl">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-sm shadow-xl cursor-default">
             <h2 className="text-lg font-bold text-zinc-100">Eliminar gasto</h2>
             <p className="text-sm text-zinc-400 mt-2">
               ¿Eliminar &quot;<span className="text-zinc-200">{concept}</span>&quot; (€{amount.toFixed(2)})?
