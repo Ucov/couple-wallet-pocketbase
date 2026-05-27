@@ -17,6 +17,7 @@ export default function BottomNav() {
       <div className="max-w-md mx-auto px-6 h-16 flex items-center justify-between">
         <Link 
           href="/"
+          prefetch={true}
           className={`flex flex-col items-center justify-center w-[60px] h-14 mt-1 rounded-2xl space-y-1 transition-all ${
             pathname === '/' ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 hover:text-zinc-300'
           }`}
@@ -27,6 +28,7 @@ export default function BottomNav() {
         
         <Link 
           href="/shopping"
+          prefetch={true}
           className={`flex flex-col items-center justify-center w-[60px] h-14 mt-1 rounded-2xl space-y-1 transition-all ${
             pathname === '/shopping' || pathname?.startsWith('/shopping') ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 hover:text-zinc-300'
           }`}
@@ -37,6 +39,7 @@ export default function BottomNav() {
 
         <Link 
           href="/chores"
+          prefetch={true}
           className={`flex flex-col items-center justify-center w-[60px] h-14 mt-1 rounded-2xl space-y-1 transition-all ${
             pathname === '/chores' || pathname?.startsWith('/chores') ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 hover:text-zinc-300'
           }`}
@@ -47,6 +50,7 @@ export default function BottomNav() {
 
         <Link 
           href="/calendar" 
+          prefetch={true}
           className={`flex flex-col items-center justify-center w-[60px] h-14 rounded-2xl transition-all duration-300 ${
             pathname.startsWith('/calendar')
               ? 'text-emerald-400 bg-emerald-500/10' 
@@ -63,6 +67,7 @@ export default function BottomNav() {
         
         <Link 
           href="/profile"
+          prefetch={true}
           className={`flex flex-col items-center justify-center w-[60px] h-14 mt-1 rounded-2xl space-y-1 transition-all ${
             pathname === '/profile' || pathname?.startsWith('/profile') ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 hover:text-zinc-300'
           }`}
