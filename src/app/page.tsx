@@ -77,7 +77,7 @@ export default async function Dashboard({
   const prevMonthStart = new Date(currentYear, currentMonth - 1, 1)
   const prevMonthEnd = new Date(currentYear, currentMonth, 0, 23, 59, 59)
 
-  let partnerQuery = Promise.resolve({ data: null as any })
+  let partnerQuery: any = Promise.resolve({ data: null as any })
   if (userProfile?.couple_id) {
     partnerQuery = supabase.from('profiles').select('name').eq('couple_id', userProfile.couple_id).neq('id', user.id).maybeSingle()
   }
@@ -92,7 +92,7 @@ export default async function Dashboard({
 
   let prevExpensesQuery = supabase.from('expenses').select('amount').gte('date', prevMonthStart.toISOString()).lte('date', prevMonthEnd.toISOString())
 
-  let settlementQuery = Promise.resolve({ data: null as any })
+  let settlementQuery: any = Promise.resolve({ data: null as any })
 
   if (userProfile?.couple_id) {
     expensesQuery = expensesQuery.eq('couple_id', userProfile.couple_id)
