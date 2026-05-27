@@ -264,7 +264,6 @@ export default function CalendarClient({ initialEvents, coupleId }: Props) {
         <button
           onClick={() => setIsModalOpen(true)}
           className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-full p-4 shadow-xl shadow-emerald-900/20 pointer-events-auto transition-transform hover:scale-110 active:scale-95 flex items-center justify-center"
-          style={{ backgroundColor: 'var(--tw-ring-color, #059669)' }}
         >
           <PlusCircle size={32} />
         </button>

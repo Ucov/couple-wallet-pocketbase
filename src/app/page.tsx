@@ -329,8 +329,7 @@ export default async function Dashboard({
           <h2 className="text-lg font-semibold text-zinc-100">Últimos Gastos</h2>
           <Link
             href="/add"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-white shadow-lg transition-all active:scale-95 hover:brightness-110"
-            style={{ backgroundColor: 'var(--accent, #059669)' }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-white shadow-lg transition-all active:scale-95 hover:brightness-110 bg-emerald-600 hover:bg-emerald-500"
           >
             <PlusCircle size={18} />
             <span className="text-sm">Añadir</span>
