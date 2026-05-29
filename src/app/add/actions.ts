@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
+import webpush from '@/lib/webpush'
 
 const expenseSchema = z.object({
   amount: z.number().positive('La cantidad debe ser mayor a 0'),
@@ -55,9 +56,9 @@ export async function addExpense(formData: FormData) {
     .single()
 
   let finalPaidBy = user.id
+  let partnerId = null
 
-  // Si pagó la pareja, buscar su ID
-  if (paid_by_me === 'false' && profile?.couple_id) {
+  if (profile?.couple_id) {
     const { data: partnerProfile } = await supabase
       .from('profiles')
       .select('id')
@@ -66,7 +67,14 @@ export async function addExpense(formData: FormData) {
       .maybeSingle()
       
     if (partnerProfile) {
-      finalPaidBy = partnerProfile.id
+      partnerId = partnerProfile.id
+    }
+  }
+
+  // Si pagó la pareja, buscar su ID
+  if (paid_by_me === 'false') {
+    if (partnerId) {
+      finalPaidBy = partnerId
     } else {
       redirect(`/add?message=${encodeURIComponent('No se encontró a tu pareja')}`)
     }
@@ -84,6 +92,34 @@ export async function addExpense(formData: FormData) {
 
   if (error) {
     redirect(`/add?message=${encodeURIComponent(error.message)}`)
+  }
+
+  // Send push notification to partner
+  if (partnerId && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    const { data: subscriptions } = await supabase
+      .from('push_subscriptions')
+      .select('subscription_json')
+      .eq('user_id', partnerId)
+
+    if (subscriptions && subscriptions.length > 0) {
+      const payload = JSON.stringify({
+        title: 'Nuevo gasto añadido 💰',
+        body: `${concept} - €${amount.toFixed(2)}`,
+        url: '/'
+      })
+
+      for (const sub of subscriptions) {
+        try {
+          await webpush.sendNotification(sub.subscription_json, payload)
+        } catch (err: any) {
+          if (err.statusCode === 404 || err.statusCode === 410) {
+            await supabase.from('push_subscriptions').delete().eq('user_id', partnerId).contains('subscription_json', { endpoint: sub.subscription_json.endpoint })
+          } else {
+            console.error('Error sending push notification:', err)
+          }
+        }
+      }
+    }
   }
 
   revalidatePath('/')
