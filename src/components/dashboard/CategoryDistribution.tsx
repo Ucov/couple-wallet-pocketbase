@@ -4,7 +4,7 @@ import { DonutChart, BarList } from '@tremor/react'
 
 interface CategoryData {
   name: string
-  value: number
+  amount: number
   color: string
   icon: string
 }
@@ -25,13 +25,13 @@ export default function CategoryDistribution({ categories, total }: CategoryDist
   // Format data for DonutChart
   const donutData = categories.map(c => ({
     name: c.name,
-    amount: c.value,
+    amount: c.amount,
   }))
 
   // Format data for BarList
   const barListData = categories.map(c => ({
     name: c.name,
-    value: c.value,
+    value: c.amount,
     icon: () => <span className="mr-2 text-base">{c.icon}</span>,
   }))
 
@@ -42,7 +42,7 @@ export default function CategoryDistribution({ categories, total }: CategoryDist
           data={donutData}
           category="amount"
           index="name"
-          valueFormatter={(number) => `€${number.toFixed(2)}`}
+          valueFormatter={(number: number) => `€${number.toFixed(2)}`}
           colors={['emerald', 'zinc', 'indigo', 'rose', 'cyan', 'amber', 'purple', 'fuchsia']}
           className="w-40 h-40"
           showAnimation={true}
@@ -53,7 +53,7 @@ export default function CategoryDistribution({ categories, total }: CategoryDist
         <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-4">Desglose por Categoría</p>
         <BarList 
           data={barListData} 
-          valueFormatter={(number) => `€${number.toFixed(2)}`}
+          valueFormatter={(number: number) => `€${number.toFixed(2)}`}
           className="[&_.tremor-BarList-bar]:bg-emerald-500/20 [&_.tremor-BarList-bar]:border [&_.tremor-BarList-bar]:border-emerald-500/30"
         />
       </div>

@@ -48,22 +48,6 @@ export default function ExpenseAreaChart({ data, myName, partnerName }: ExpenseA
         curveType="monotone"
         showGradient={true}
         customTooltip={customTooltip}
-        theme={{
-          light: {
-            colors: {
-              background: 'bg-zinc-950',
-              border: 'border-zinc-800',
-              text: 'text-zinc-400'
-            }
-          },
-          dark: {
-            colors: {
-              background: 'bg-zinc-950',
-              border: 'border-zinc-800',
-              text: 'text-zinc-400'
-            }
-          }
-        }}
       />
     </div>
   )

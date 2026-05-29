@@ -95,7 +95,7 @@ export default async function Dashboard({
 
   let expensesQuery = supabase.from('expenses').select(`
       id, amount, concept, date, created_at, paid_by, category_id, is_refundable, is_transfer, categories ( name, icon, color )
-    `).gte('date', startOfMonth.toISOString()).lte('date', endOfMonth.toISOString()).order('date', { ascending: false })
+    `).gte('date', startOfMonth.toISOString()).lte('date', endOfMonth.toISOString()).order('date', { ascending: false }).order('created_at', { ascending: false })
 
   let prevExpensesQuery = supabase.from('expenses').select('amount').gte('date', prevMonthStart.toISOString()).lte('date', prevMonthEnd.toISOString()).eq('is_transfer', false)
 
