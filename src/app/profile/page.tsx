@@ -8,6 +8,7 @@ import LeaveGroupButton from './LeaveGroupButton'
 import PushNotificationsClient from '@/components/PushNotificationsClient'
 import BackupPanel from './BackupPanel'
 import ColorSelector from './ColorSelector'
+import ThemeToggle from '@/components/ThemeToggle'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,8 +46,12 @@ export default async function ProfilePage() {
         <ProfileForm initialName={profile?.name || ''} />
         
         <div className="mt-8 pt-6 border-t border-zinc-800">
-          <h2 className="text-sm text-zinc-400 font-semibold uppercase tracking-wider mb-4">Color de la App</h2>
+          <h2 className="text-sm text-zinc-400 font-semibold uppercase tracking-wider mb-4">Apariencia</h2>
           <ColorSelector />
+          <div className="mt-6 flex items-center justify-between">
+            <span className="text-sm font-medium text-zinc-300">Modo Oscuro / Claro</span>
+            <ThemeToggle />
+          </div>
         </div>
       </section>
 

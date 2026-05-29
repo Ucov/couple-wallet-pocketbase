@@ -14,7 +14,7 @@ import { leaveCouple } from './setup-couple/actions'
 import HeroBalanceCard from '@/components/dashboard/HeroBalanceCard'
 import ExpenseAreaChart from '@/components/dashboard/ExpenseAreaChart'
 import CategoryDistribution from '@/components/dashboard/CategoryDistribution'
-import SwipeableExpenseItem from '@/components/dashboard/SwipeableExpenseItem'
+import ExpenseItem from '@/components/dashboard/ExpenseItem'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 // Forzamos que la página sea siempre dinámica y no se guarde en caché
@@ -344,7 +344,7 @@ export default async function Dashboard({
             const categories = expense.categories
             const category = Array.isArray(categories) ? categories[0] : categories
             return (
-              <SwipeableExpenseItem
+              <ExpenseItem
                 key={expense.id}
                 id={expense.id}
                 concept={expense.concept}

@@ -63,10 +63,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-[var(--bg-base)] text-[var(--text-primary)] items-center pb-20">
         <ThemeProvider>
-          {/* ThemeToggle fijo en la esquina superior derecha — visible en todas las pantallas */}
-          <div className="fixed top-4 right-4 z-50">
-            <ThemeToggle />
-          </div>
+
           <SwipeNavigation />
           <PageTransition>
             {children}
