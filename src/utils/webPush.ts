@@ -1,31 +1,8 @@
 import { createClient } from '@/utils/supabase/server'
-
-let isConfigured = false
-
-function ensureConfigured() {
-  if (isConfigured) return
-  try {
-    // Dynamic require to avoid module-level crash
-    const webpush = require('web-push')
-    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-    const privateKey = process.env.VAPID_PRIVATE_KEY
-    if (publicKey && privateKey) {
-      webpush.setVapidDetails('mailto:your-email@example.com', publicKey, privateKey)
-      isConfigured = true
-    } else {
-      console.warn('VAPID keys not configured — push notifications disabled')
-    }
-  } catch (err) {
-    console.error('Error configuring web-push:', err)
-  }
-}
+import webpush from '@/lib/webpush'
 
 export async function sendPushToPartner(coupleId: string, currentUserId: string, title: string, body: string, url: string = '/') {
   try {
-    ensureConfigured()
-    if (!isConfigured) return
-
-    const webpush = require('web-push')
     const supabase = await createClient()
 
     // Buscar a la pareja
@@ -34,7 +11,7 @@ export async function sendPushToPartner(coupleId: string, currentUserId: string,
       .select('id')
       .eq('couple_id', coupleId)
       .neq('id', currentUserId)
-      .single()
+      .maybeSingle()
 
     if (!partnerProfile) return
 
