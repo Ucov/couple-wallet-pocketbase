@@ -1,8 +1,8 @@
 /// <reference lib="webworker" />
 
-declare let self: ServiceWorkerGlobalScope
+const sw = self as unknown as ServiceWorkerGlobalScope
 
-self.addEventListener('push', (event) => {
+sw.addEventListener('push', (event) => {
   const data = event.data?.json() ?? {}
   const title = data.title || 'Nueva Notificación'
   const options = {
@@ -13,22 +13,23 @@ self.addEventListener('push', (event) => {
     vibrate: [200, 100, 200]
   }
 
-  event.waitUntil(self.registration.showNotification(title, options))
+  event.waitUntil(sw.registration.showNotification(title, options))
 })
 
-self.addEventListener('notificationclick', (event) => {
+sw.addEventListener('notificationclick', (event) => {
   event.notification.close()
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      const urlToOpen = new URL(event.notification.data, self.location.origin).href
+    sw.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      const urlToOpen = new URL(event.notification.data, sw.location.origin).href
       for (const client of clientList) {
         if (client.url === urlToOpen && 'focus' in client) {
           return client.focus()
         }
       }
-      if (self.clients.openWindow) {
-        return self.clients.openWindow(urlToOpen)
+      if (sw.clients.openWindow) {
+        return sw.clients.openWindow(urlToOpen)
       }
     })
   )
 })
+
