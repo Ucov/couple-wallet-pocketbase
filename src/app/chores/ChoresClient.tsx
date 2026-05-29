@@ -66,7 +66,7 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
     setChores(prev => [{ id: tempId, title: tempTitle, is_done: false, assigned_to: null }, ...prev])
     setNewTitle('')
     startTransition(async () => { 
-      await addChore(coupleId, tempTitle) 
+      await addChore(tempTitle) 
       broadcastSync()
     })
   }

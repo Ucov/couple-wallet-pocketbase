@@ -4,11 +4,20 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendPushToPartner } from '@/utils/webPush'
 
-export async function addChore(coupleId: string, title: string) {
+export async function addChore(title: string) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'No auth' }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('couple_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.couple_id) return { error: 'No couple' }
+    const coupleId = profile.couple_id
 
     const { error } = await supabase
       .from('chores')
