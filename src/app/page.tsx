@@ -54,11 +54,14 @@ export default async function Dashboard({
     redirect('/login')
   }
   const user = pb.authStore.model
+  if (!user) {
+    redirect('/login')
+  }
 
   // 2. Obtener perfil del usuario
   let userProfile: any = null
   try {
-    userProfile = await pb.collection('users').getOne(user?.id)
+    userProfile = await pb.collection('users').getOne(user.id)
   } catch (profileError) {
     console.error('Error fetching profile:', profileError)
   }
@@ -67,7 +70,7 @@ export default async function Dashboard({
     redirect('/setup-couple')
   }
 
-  const myName = userProfile?.name || user?.email?.split('@')[0] || 'Usuario'
+  const myName = userProfile?.name || user.email?.split('@')[0] || 'Usuario'
   let partnerName = 'Pareja'
 
   const now = new Date()
@@ -81,7 +84,7 @@ export default async function Dashboard({
   let partnerData: any = null
   if (userProfile?.couple_id) {
     try {
-      partnerData = await pb.collection('users').getFirstListItem(`couple_id="${userProfile.couple_id}" && id!="${user?.id}"`)
+      partnerData = await pb.collection('users').getFirstListItem(`couple_id="${userProfile.couple_id}" && id!="${user.id}"`)
     } catch(e) {}
   }
 
@@ -98,8 +101,8 @@ export default async function Dashboard({
     expensesFilter += ` && couple_id="${userProfile.couple_id}"`
     prevExpensesFilter += ` && couple_id="${userProfile.couple_id}"`
   } else {
-    expensesFilter += ` && paid_by="${user?.id}"`
-    prevExpensesFilter += ` && paid_by="${user?.id}"`
+    expensesFilter += ` && paid_by="${user.id}"`
+    prevExpensesFilter += ` && paid_by="${user.id}"`
   }
 
   let expenses: any[] = []
@@ -148,17 +151,17 @@ export default async function Dashboard({
     const amount = Number(exp.amount)
     
     if (exp.is_transfer) {
-      if (exp.paid_by === user?.id) myTransfersSent += amount
+      if (exp.paid_by === user.id) myTransfersSent += amount
       else partnerTransfersSent += amount
       return // No sumarlo a totales normales ni a gráficas
     }
 
     if (exp.is_refundable) {
       refundableExpenses.push(exp)
-      if (exp.paid_by === user?.id) myRefundableTotal += amount
+      if (exp.paid_by === user.id) myRefundableTotal += amount
       else partnerRefundableTotal += amount
     } else {
-      if (exp.paid_by === user?.id) {
+      if (exp.paid_by === user.id) {
         myNormalTotal += amount
         myCumulative += amount
       } else {
@@ -288,7 +291,7 @@ export default async function Dashboard({
           myTotal={myTotal}
           partnerTotal={partnerTotal}
           partnerName={partnerName}
-          settleAction={userProfile?.couple_id && partnerData?.id ? settleMonth.bind(null, userProfile.couple_id, currentMonth, currentYear, debtAmount, isOwed ? partnerData.id : user?.id) : undefined}
+          settleAction={userProfile?.couple_id && partnerData?.id ? settleMonth.bind(null, userProfile.couple_id, currentMonth, currentYear, debtAmount, isOwed ? partnerData.id : user.id) : undefined}
         />
       </section>
 
@@ -346,7 +349,7 @@ export default async function Dashboard({
                 concept={expense.concept}
                 amount={Number(expense.amount)}
                 date={expense.date}
-                paidByStr={expense.paid_by === user?.id ? 'Tú' : partnerName}
+                paidByStr={expense.paid_by === user.id ? 'Tú' : partnerName}
                 categoryName={category?.name || 'General'}
                 categoryIcon={getCategoryIcon(category?.icon, category?.name)}
                 isRefundable={expense.is_refundable}
