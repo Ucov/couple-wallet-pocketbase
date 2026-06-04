@@ -67,7 +67,7 @@ export default async function Dashboard({
     redirect('/setup-couple')
   }
 
-  const myName = userProfile?.name || user.email?.split('@')[0] || 'Usuario'
+  const myName = userProfile?.name || user?.email?.split('@')[0] || 'Usuario'
   let partnerName = 'Pareja'
 
   const now = new Date()
