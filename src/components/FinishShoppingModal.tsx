@@ -5,7 +5,6 @@ import { Receipt, X } from 'lucide-react'
 import { finishShopping } from '@/app/shopping/actions'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/utils/supabase/client'
 
 export default function FinishShoppingButton({ boughtItemsCount, coupleId }: { boughtItemsCount: number, coupleId: string }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -18,8 +17,7 @@ export default function FinishShoppingButton({ boughtItemsCount, coupleId }: { b
     setPending(true)
     try {
       await finishShopping(formData)
-      const supabase = createClient()
-      supabase.channel(`sync_shop_${coupleId}`).send({ type: 'broadcast', event: 'update_shopping', payload: {} })
+      // PocketBase real-time not implemented yet
       toast.success('Gasto añadido correctamente')
       setIsOpen(false)
       router.push('/')

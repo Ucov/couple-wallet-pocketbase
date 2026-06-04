@@ -1,28 +1,32 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/pocketbase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function updateProfile(formData: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('No estás autenticado')
+  const pb = await createClient()
+  if (!pb.authStore.isValid) throw new Error('No estás autenticado')
+  const user = pb.authStore.model
 
   const name = formData.get('name') as string
   if (name) {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ name })
-      .eq('id', user.id)
-    if (error) throw new Error(error.message)
+    try {
+      await pb.collection('users').update(user!.id, { name })
+    } catch (error: any) {
+      throw new Error(error.message)
+    }
   }
 
   const password = formData.get('password') as string
   if (password && password.length >= 6) {
-    const { error } = await supabase.auth.updateUser({
-      password: password
-    })
-    if (error) throw new Error(error.message)
+    try {
+      await pb.collection('users').update(user!.id, {
+        password: password,
+        passwordConfirm: password
+      })
+    } catch (error: any) {
+      throw new Error(error.message)
+    }
   }
 
   revalidatePath('/')
@@ -31,42 +35,45 @@ export async function updateProfile(formData: FormData) {
 }
 
 export async function saveSubscription(subscriptionJson: any) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('No user')
+  const pb = await createClient()
+  if (!pb.authStore.isValid) throw new Error('No user')
+  const user = pb.authStore.model
 
-  await supabase
-    .from('push_subscriptions')
-    .insert({
-      user_id: user.id,
+  try {
+    await pb.collection('push_subscriptions').create({
+      user_id: user!.id,
       subscription_json: subscriptionJson
     })
+  } catch(e) {}
 }
 
 export async function deleteSubscription(endpoint: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('No user')
+  const pb = await createClient()
+  if (!pb.authStore.isValid) throw new Error('No user')
+  const user = pb.authStore.model
 
-  await supabase
-    .from('push_subscriptions')
-    .delete()
-    .eq('user_id', user.id)
-    .contains('subscription_json', { endpoint })
+  try {
+    const subs = await pb.collection('push_subscriptions').getFullList({ filter: `user_id="${user!.id}"` })
+    for (const sub of subs) {
+      if (sub.subscription_json?.endpoint === endpoint) {
+        await pb.collection('push_subscriptions').delete(sub.id)
+      }
+    }
+  } catch(e) {}
 }
 
 export async function generateJoinCode(coupleId: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'No user' }
+  const pb = await createClient()
+  if (!pb.authStore.isValid) return { error: 'No user' }
 
   const newCode = Math.random().toString(36).substring(2, 8).toUpperCase()
-  const { error } = await supabase
-    .from('couples')
-    .update({ join_code: newCode })
-    .eq('id', coupleId)
+  
+  try {
+    await pb.collection('couples').update(coupleId, { join_code: newCode })
+  } catch (error: any) {
+    return { error: error.message }
+  }
 
-  if (error) return { error: error.message }
   revalidatePath('/profile')
   return { success: true, code: newCode }
 }

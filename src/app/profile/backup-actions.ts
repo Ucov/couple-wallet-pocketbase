@@ -1,29 +1,29 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/pocketbase/server'
 import { z } from 'zod'
 
 export async function exportBackupData() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
-
-  const { data: profile } = await supabase.from('profiles').select('couple_id').eq('id', user.id).single()
+  const pb = await createClient()
+  if (!pb.authStore.isValid) throw new Error('Not authenticated')
+  const user = pb.authStore.model
   
-  if (!profile?.couple_id) throw new Error('No estás en ninguna pareja')
+  if (!user?.couple_id) throw new Error('No estás en ninguna pareja')
+
+  const filter = `couple_id="${user.couple_id}"`
 
   const [expenses, chores, shoppingItems] = await Promise.all([
-    supabase.from('expenses').select('*').eq('couple_id', profile.couple_id),
-    supabase.from('chores').select('*').eq('couple_id', profile.couple_id),
-    supabase.from('shopping_items').select('*').eq('couple_id', profile.couple_id)
+    pb.collection('expenses').getFullList({ filter }),
+    pb.collection('chores').getFullList({ filter }),
+    pb.collection('shopping_items').getFullList({ filter })
   ])
 
   return {
     success: true,
     data: {
-      expenses: expenses.data || [],
-      chores: chores.data || [],
-      shopping_items: shoppingItems.data || []
+      expenses: expenses || [],
+      chores: chores || [],
+      shopping_items: shoppingItems || []
     }
   }
 }
@@ -36,12 +36,11 @@ const backupSchema = z.object({
 })
 
 export async function importBackupData(jsonData: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  const pb = await createClient()
+  if (!pb.authStore.isValid) throw new Error('Not authenticated')
+  const user = pb.authStore.model
 
-  const { data: profile } = await supabase.from('profiles').select('couple_id').eq('id', user.id).single()
-  if (!profile?.couple_id) throw new Error('No estás en ninguna pareja')
+  if (!user?.couple_id) throw new Error('No estás en ninguna pareja')
 
   let parsed: any;
   try {
@@ -60,18 +59,24 @@ export async function importBackupData(jsonData: string) {
   // Hacemos upserts básicos asegurando que el couple_id sea el correcto, para no sobreescribir datos ajenos
   try {
     if (expenses && expenses.length > 0) {
-      const safeExpenses = expenses.map(e => ({ ...e, couple_id: profile.couple_id }))
-      await supabase.from('expenses').upsert(safeExpenses)
+      for (const e of expenses) {
+        delete e.id // PB auto-generates or we need to update by id. Let's just create them for simplicity as backups or create if not exists
+        await pb.collection('expenses').create({ ...e, couple_id: user.couple_id })
+      }
     }
     
     if (chores && chores.length > 0) {
-      const safeChores = chores.map(c => ({ ...c, couple_id: profile.couple_id }))
-      await supabase.from('chores').upsert(safeChores)
+      for (const c of chores) {
+        delete c.id
+        await pb.collection('chores').create({ ...c, couple_id: user.couple_id })
+      }
     }
 
     if (shopping_items && shopping_items.length > 0) {
-      const safeItems = shopping_items.map(s => ({ ...s, couple_id: profile.couple_id }))
-      await supabase.from('shopping_items').upsert(safeItems)
+      for (const s of shopping_items) {
+        delete s.id
+        await pb.collection('shopping_items').create({ ...s, couple_id: user.couple_id })
+      }
     }
 
     return { success: true }

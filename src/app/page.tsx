@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/pocketbase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { PlusCircle, LogOut, Pencil, ChevronLeft, ChevronRight, Repeat, CheckCircle, UserCog } from 'lucide-react'
@@ -46,27 +46,20 @@ export default async function Dashboard({
 }: {
   searchParams: Promise<{ month?: string; year?: string }>
 }) {
-  const supabase = await createClient()
+  const pb = await createClient()
   const { month, year } = await searchParams
 
   // 1. Verificar auth
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  if (!pb.authStore.isValid) {
     redirect('/login')
   }
+  const user = pb.authStore.model
 
   // 2. Obtener perfil del usuario
-  const { data: userProfile, error: profileError } = await supabase
-    .from('profiles')
-    .select(`
-      couple_id, 
-      name,
-      split_percentage
-    `)
-    .eq('id', user.id)
-    .single()
-
-  if (profileError) {
+  let userProfile: any = null
+  try {
+    userProfile = await pb.collection('users').getOne(user!.id)
+  } catch (profileError) {
     console.error('Error fetching profile:', profileError)
   }
 
@@ -85,40 +78,43 @@ export default async function Dashboard({
   const prevMonthStart = new Date(currentYear, currentMonth - 1, 1)
   const prevMonthEnd = new Date(currentYear, currentMonth, 0, 23, 59, 59)
 
-  let partnerQuery: any = Promise.resolve({ data: null as any })
+  let partnerData: any = null
   if (userProfile?.couple_id) {
-    partnerQuery = supabase.from('profiles').select('id, name').eq('couple_id', userProfile.couple_id).neq('id', user.id).maybeSingle()
+    try {
+      partnerData = await pb.collection('users').getFirstListItem(`couple_id="${userProfile.couple_id}" && id!="${user.id}"`)
+    } catch(e) {}
   }
 
   const applyRecurring = userProfile?.couple_id 
     ? applyRecurringExpenses(userProfile.couple_id, now.getMonth(), now.getFullYear(), false).catch(e => console.error(e))
     : Promise.resolve()
 
-  let expensesQuery = supabase.from('expenses').select(`
-      id, amount, concept, date, created_at, paid_by, category_id, is_refundable, is_transfer, categories ( name, icon, color )
-    `).gte('date', startOfMonth.toISOString()).lte('date', endOfMonth.toISOString()).order('date', { ascending: false }).order('created_at', { ascending: false })
+  await applyRecurring
 
-  let prevExpensesQuery = supabase.from('expenses').select('amount').gte('date', prevMonthStart.toISOString()).lte('date', prevMonthEnd.toISOString()).eq('is_transfer', false)
-
+  let expensesFilter = `date >= "${startOfMonth.toISOString().replace('T', ' ')}" && date <= "${endOfMonth.toISOString().replace('T', ' ')}"`
+  let prevExpensesFilter = `date >= "${prevMonthStart.toISOString().replace('T', ' ')}" && date <= "${prevMonthEnd.toISOString().replace('T', ' ')}" && is_transfer=false`
+  
   if (userProfile?.couple_id) {
-    expensesQuery = expensesQuery.eq('couple_id', userProfile.couple_id)
-    prevExpensesQuery = prevExpensesQuery.eq('couple_id', userProfile.couple_id)
+    expensesFilter += ` && couple_id="${userProfile.couple_id}"`
+    prevExpensesFilter += ` && couple_id="${userProfile.couple_id}"`
   } else {
-    expensesQuery = expensesQuery.eq('paid_by', user.id)
-    prevExpensesQuery = prevExpensesQuery.eq('paid_by', user.id)
+    expensesFilter += ` && paid_by="${user.id}"`
+    prevExpensesFilter += ` && paid_by="${user.id}"`
   }
 
-  const [
-    { data: partnerData },
-    _, // recurring
-    { data: expenses },
-    { data: prevExpenses }
-  ] = await Promise.all([
-    partnerQuery,
-    applyRecurring,
-    expensesQuery,
-    prevExpensesQuery
-  ])
+  let expenses: any[] = []
+  try {
+    expenses = await pb.collection('expenses').getFullList({
+        filter: expensesFilter,
+        sort: '-date',
+        expand: 'category_id'
+    })
+  } catch(e) { console.error('Error fetching expenses:', e) }
+
+  let prevExpenses: any[] = []
+  try {
+    prevExpenses = await pb.collection('expenses').getFullList({ filter: prevExpensesFilter })
+  } catch(e) {}
 
   if (partnerData?.name) partnerName = partnerData.name
 
@@ -174,8 +170,8 @@ export default async function Dashboard({
       dailyData[day - 1][myName] = myCumulative
       dailyData[day - 1][partnerName] = partnerCumulative
 
-      const categories = exp.categories
-      const category = Array.isArray(categories) ? categories[0] : categories
+      const category = exp.expand?.category_id
+
       const catId = exp.category_id || 'no-category'
       if (!categoryTotals[catId]) {
         categoryTotals[catId] = {
@@ -341,9 +337,8 @@ export default async function Dashboard({
             </div>
           )}
           
-          {expenses?.map((expense: Expense) => {
-            const categories = expense.categories
-            const category = Array.isArray(categories) ? categories[0] : categories
+          {expenses?.map((expense: any) => {
+            const category = expense.expand?.category_id
             return (
               <ExpenseItem
                 key={expense.id}

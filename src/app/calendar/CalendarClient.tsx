@@ -10,7 +10,6 @@ import { es } from 'date-fns/locale'
 import { PlusCircle, Trash2, Clock, CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, List } from 'lucide-react'
 import { addCalendarEvent, deleteCalendarEvent } from './actions'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/utils/supabase/client'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 
@@ -35,25 +34,14 @@ export default function CalendarClient({ initialEvents, coupleId }: Props) {
   const [newEventTime, setNewEventTime] = useState('20:00')
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
-  const supabase = useMemo(() => createClient(), [])
 
   // Realtime robusto mediante Broadcast + Refresh
   useEffect(() => {
-    const channel = supabase.channel(`sync_calendar_${coupleId}`)
-      .on('broadcast', { event: 'update_calendar' }, () => {
-        router.refresh()
-      })
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [coupleId, supabase, router])
+    // PocketBase real-time not implemented yet
+  }, [coupleId, router])
 
   const broadcastSync = () => {
-    supabase.channel(`sync_calendar_${coupleId}`).send({
-      type: 'broadcast',
-      event: 'update_calendar',
-      payload: {}
-    })
+    // PocketBase real-time not implemented yet
   }
   
   // -- VISTA SEMANAL (Cinta horizontal) --

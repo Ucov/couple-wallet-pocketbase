@@ -1,36 +1,27 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/pocketbase/server'
 import { redirect } from 'next/navigation'
 import ChoresClient from './ChoresClient'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ChoresPage() {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const pb = await createClient()
+  if (!pb.authStore.isValid) redirect('/login')
+  const user = pb.authStore.model
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('couple_id, name')
-    .eq('id', user.id)
-    .single()
+  if (!user?.couple_id) redirect('/setup-couple')
 
-  if (!profile?.couple_id) redirect('/setup-couple')
+  let partnerProfile: any = null
+  try {
+    partnerProfile = await pb.collection('users').getFirstListItem(`couple_id="${user.couple_id}" && id!="${user.id}"`)
+  } catch(e) {}
 
-  // Obtener perfil de la pareja para las asignaciones
-  const { data: partnerProfile } = await supabase
-    .from('profiles')
-    .select('id, name')
-    .eq('couple_id', profile.couple_id)
-    .neq('id', user.id)
-    .maybeSingle()
-
-  const { data: chores } = await supabase
-    .from('chores')
-    .select('*')
-    .eq('couple_id', profile.couple_id)
-    .order('created_at', { ascending: false })
+  let chores: any[] = []
+  try {
+    chores = await pb.collection('chores').getFullList({
+      filter: `couple_id="${user.couple_id}"`
+    })
+  } catch(e) {}
 
   return (
     <main className="w-full max-w-md mx-auto min-h-screen flex flex-col pb-32">
@@ -41,9 +32,9 @@ export default async function ChoresPage() {
 
       <ChoresClient 
         initialChores={chores || []} 
-        coupleId={profile.couple_id} 
+        coupleId={user.couple_id} 
         currentUserId={user.id}
-        currentUserName={profile.name || 'Tú'}
+        currentUserName={user.name || 'Tú'}
         partnerId={partnerProfile?.id || null}
         partnerName={partnerProfile?.name || 'Pareja'}
       />

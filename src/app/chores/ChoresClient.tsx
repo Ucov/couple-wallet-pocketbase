@@ -3,7 +3,6 @@
 import { useState, useTransition, useEffect, useMemo } from 'react'
 import { PlusCircle, Trash2, X } from 'lucide-react'
 import { addChore, toggleChoreStatus, deleteChore } from './actions'
-import { createClient } from '@/utils/supabase/client'
 import { getChoreIcon } from '@/utils/choreIcons'
 
 interface Chore {
@@ -29,7 +28,6 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
   const [newTitle, setNewTitle] = useState('')
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
-  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     setChores(initialChores)
@@ -37,21 +35,11 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
 
   // Realtime robusto mediante Broadcast + Refresh
   useEffect(() => {
-    const channel = supabase.channel(`sync_${coupleId}`)
-      .on('broadcast', { event: 'update_chores' }, () => {
-        router.refresh() // Obliga a Next.js a traer los datos frescos del servidor
-      })
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [coupleId, supabase, router])
+    // PocketBase real-time not implemented yet
+  }, [coupleId, router])
 
   const broadcastSync = () => {
-    supabase.channel(`sync_${coupleId}`).send({
-      type: 'broadcast',
-      event: 'update_chores',
-      payload: {}
-    })
+    // PocketBase real-time not implemented yet
   }
 
   const pendingChores = chores.filter(c => !c.is_done)

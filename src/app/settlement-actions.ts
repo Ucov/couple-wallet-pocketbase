@@ -1,17 +1,16 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/pocketbase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function settleMonth(coupleId: string, month: number, year: number, amount: number, debtorId: string) {
-  const supabase = await createClient()
+  const pb = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  if (!pb.authStore.isValid) throw new Error('Not authenticated')
+  const user = pb.authStore.model
 
-  const { error } = await supabase
-    .from('expenses')
-    .insert({
+  try {
+    await pb.collection('expenses').create({
       amount: amount,
       concept: 'Liquidación (Bizum)',
       date: new Date().toISOString(),
@@ -20,8 +19,7 @@ export async function settleMonth(coupleId: string, month: number, year: number,
       is_transfer: true,
       category_id: null
     })
-
-  if (error) {
+  } catch (error: any) {
     console.error('Error creating settlement transfer:', error)
     throw new Error(error.message)
   }

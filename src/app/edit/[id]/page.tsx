@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/pocketbase/server'
 import EditExpenseForm from '@/components/EditExpenseForm'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
@@ -10,19 +10,19 @@ export default async function EditExpensePage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createClient()
+  const pb = await createClient()
 
-  const { data: expense } = await supabase
-    .from('expenses')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  if (!expense) {
+  let expense: any = null
+  try {
+    expense = await pb.collection('expenses').getOne(id)
+  } catch(e) {
     notFound()
   }
 
-  const { data: categories } = await supabase.from('categories').select('*').order('name')
+  let categories: any[] = []
+  try {
+    categories = await pb.collection('categories').getFullList({ sort: 'name' })
+  } catch(e) {}
 
   return (
     <main className="w-full max-w-md mx-auto p-4 flex flex-col min-h-screen">

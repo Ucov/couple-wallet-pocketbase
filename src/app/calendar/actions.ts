@@ -1,30 +1,28 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/pocketbase/server'
 import { revalidatePath } from 'next/cache'
 import { sendPushToPartner } from '@/utils/webPush'
 
 export async function addCalendarEvent(coupleId: string, title: string, dateIso: string) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { error: 'No autorizado' }
+    const pb = await createClient()
+    if (!pb.authStore.isValid) return { error: 'No autorizado' }
+    const user = pb.authStore.model
 
-    const { error } = await supabase
-      .from('calendar_events')
-      .insert([{ 
+    try {
+      await pb.collection('calendar_events').create({
         couple_id: coupleId, 
         title, 
         date: dateIso, 
-        created_by: user.id 
-      }])
-
-    if (error) {
+        created_by: user!.id 
+      })
+    } catch (error: any) {
       console.error('Error addCalendarEvent:', error)
       return { error: 'No se pudo añadir el evento' }
     }
     
-    sendPushToPartner(coupleId, user.id, '📅 Nuevo evento en agenda', `${user.user_metadata?.name || 'Tu pareja'} ha añadido: ${title}`, '/calendar')
+    sendPushToPartner(coupleId, user!.id, '📅 Nuevo evento en agenda', `${user!.name || 'Tu pareja'} ha añadido: ${title}`, '/calendar')
 
     revalidatePath('/calendar')
     return { success: true }
@@ -35,16 +33,12 @@ export async function addCalendarEvent(coupleId: string, title: string, dateIso:
 
 export async function deleteCalendarEvent(id: string) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { error: 'No autorizado' }
+    const pb = await createClient()
+    if (!pb.authStore.isValid) return { error: 'No autorizado' }
 
-    const { error } = await supabase
-      .from('calendar_events')
-      .delete()
-      .eq('id', id)
-
-    if (error) {
+    try {
+      await pb.collection('calendar_events').delete(id)
+    } catch (error: any) {
       console.error('Error deleteCalendarEvent:', error)
       return { error: 'No se pudo borrar el evento' }
     }

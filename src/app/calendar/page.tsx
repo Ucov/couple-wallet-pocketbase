@@ -1,22 +1,16 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/pocketbase/server'
 import { redirect } from 'next/navigation'
 import CalendarClient from './CalendarClient'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CalendarPage() {
-  const supabase = await createClient()
+  const pb = await createClient()
   
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!pb.authStore.isValid) redirect('/login')
+  const user = pb.authStore.model
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('couple_id, name')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile?.couple_id) redirect('/setup-couple')
+  if (!user?.couple_id) redirect('/setup-couple')
 
   // Obtener eventos desde hace 7 días hasta los próximos 60 días
   const past = new Date()
@@ -25,13 +19,13 @@ export default async function CalendarPage() {
   const future = new Date()
   future.setDate(future.getDate() + 365)
 
-  const { data: events } = await supabase
-    .from('calendar_events')
-    .select('*')
-    .eq('couple_id', profile.couple_id)
-    .gte('date', past.toISOString())
-    .lte('date', future.toISOString())
-    .order('date', { ascending: true })
+  let events: any[] = []
+  try {
+    events = await pb.collection('calendar_events').getFullList({
+      filter: `couple_id="${user.couple_id}" && date >= "${past.toISOString().replace('T', ' ')}" && date <= "${future.toISOString().replace('T', ' ')}"`,
+      sort: 'date'
+    })
+  } catch(e) {}
 
   return (
     <main className="w-full max-w-md mx-auto min-h-screen flex flex-col pb-32">
@@ -40,7 +34,7 @@ export default async function CalendarPage() {
         <p className="text-sm text-zinc-500 mt-1">Sincronizados en todo momento</p>
       </header>
 
-      <CalendarClient initialEvents={events || []} coupleId={profile.couple_id} />
+      <CalendarClient initialEvents={events || []} coupleId={user.couple_id} />
     </main>
   )
 }

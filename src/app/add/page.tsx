@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/pocketbase/server'
 import { addExpense } from './actions'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
@@ -9,8 +9,12 @@ export default async function AddExpensePage({
 }: {
   searchParams: Promise<{ message: string }>
 }) {
-  const supabase = await createClient()
-  const { data: categories } = await supabase.from('categories').select('*').order('name')
+  const pb = await createClient()
+  let categories: any[] = []
+  try {
+    categories = await pb.collection('categories').getFullList({ sort: 'name' })
+  } catch(e) {}
+  
   const { message } = await searchParams
 
   return (

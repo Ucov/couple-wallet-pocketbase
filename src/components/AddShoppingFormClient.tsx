@@ -3,13 +3,11 @@
 import { useState, useTransition } from 'react'
 import { Plus } from 'lucide-react'
 import { addShoppingItem } from '@/app/shopping/actions'
-import { createClient } from '@/utils/supabase/client'
 import { toast } from 'sonner'
 
 export default function AddShoppingFormClient({ uniqueNames, coupleId }: { uniqueNames: string[], coupleId: string }) {
   const [name, setName] = useState('')
   const [isPending, startTransition] = useTransition()
-  const supabase = createClient()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,12 +25,7 @@ export default function AddShoppingFormClient({ uniqueNames, coupleId }: { uniqu
         return
       }
       
-      // Broadcast to other clients
-      supabase.channel(`sync_shop_${coupleId}`).send({
-        type: 'broadcast',
-        event: 'update_shopping',
-        payload: {}
-      })
+      // Broadcast to other clients - not implemented in PB yet
     })
   }
 

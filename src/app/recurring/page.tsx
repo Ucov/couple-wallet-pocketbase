@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/pocketbase/server'
 import { addRecurringExpense } from '../recurring-actions'
 import Link from 'next/link'
 import { ArrowLeft, Repeat } from 'lucide-react'
@@ -9,20 +9,14 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function RecurringExpensesPage() {
-  const supabase = await createClient()
+  const pb = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  if (!pb.authStore.isValid) {
     redirect('/login')
   }
+  const user = pb.authStore.model
 
-  const { data: userProfile } = await supabase
-    .from('profiles')
-    .select('couple_id')
-    .eq('id', user.id)
-    .single()
-
-  if (!userProfile?.couple_id) {
+  if (!user?.couple_id) {
     return (
       <main className="w-full max-w-md mx-auto p-4 flex flex-col min-h-screen justify-center items-center text-center">
         <h1 className="text-xl font-bold mb-4">Gastos Fijos</h1>
@@ -32,20 +26,19 @@ export default async function RecurringExpensesPage() {
     )
   }
 
-  const { data: categories } = await supabase.from('categories').select('*').order('name')
+  let categories: any[] = []
+  try {
+    categories = await pb.collection('categories').getFullList({ sort: 'name' })
+  } catch(e) {}
   
-  const { data: recurringExpenses } = await supabase
-    .from('recurring_expenses')
-    .select(`
-      id,
-      amount,
-      concept,
-      day_of_month,
-      paid_by,
-      categories ( name, icon, color )
-    `)
-    .eq('couple_id', userProfile.couple_id)
-    .order('day_of_month', { ascending: true })
+  let recurringExpenses: any[] = []
+  try {
+    recurringExpenses = await pb.collection('recurring_expenses').getFullList({
+      filter: `couple_id="${user.couple_id}"`,
+      sort: 'day_of_month',
+      expand: 'category_id'
+    })
+  } catch(e) {}
 
   return (
     <main className="w-full max-w-md mx-auto p-4 flex flex-col min-h-screen">
@@ -69,7 +62,7 @@ export default async function RecurringExpensesPage() {
         {recurringExpenses && recurringExpenses.length > 0 ? (
           <div className="space-y-3">
             {recurringExpenses.map((expense) => {
-              const category = Array.isArray(expense.categories) ? expense.categories[0] : expense.categories
+              const category = expense.expand?.category_id
               return (
                 <div key={expense.id} className="bg-zinc-900/50 p-4 rounded-xl flex justify-between items-center border border-zinc-800/50">
                   <div className="flex gap-3 items-center">

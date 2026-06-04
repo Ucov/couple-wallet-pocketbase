@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/pocketbase/server'
 import { redirect } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import ShoppingListClient from './ShoppingListClient'
@@ -7,24 +7,19 @@ import AddShoppingFormClient from '@/components/AddShoppingFormClient'
 export const dynamic = 'force-dynamic'
 
 export default async function ShoppingPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const pb = await createClient()
+  if (!pb.authStore.isValid) redirect('/login')
+  const user = pb.authStore.model
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('couple_id')
-    .eq('id', user.id)
-    .single()
+  if (!user?.couple_id) redirect('/setup-couple')
 
-  if (!profile?.couple_id) redirect('/setup-couple')
-
-  const { data: items } = await supabase
-    .from('shopping_items')
-    .select('*')
-    .eq('couple_id', profile.couple_id)
-    .order('status', { ascending: false })
-    .order('created_at', { ascending: false })
+  let items: any[] = []
+  try {
+    items = await pb.collection('shopping_items').getFullList({
+      filter: `couple_id="${user.couple_id}"`,
+      sort: 'status'
+    })
+  } catch(e) {}
 
   // Sacamos los nombres únicos para el autocompletado
   const uniqueNames = Array.from(new Set(items?.map(i => i.name) || []))
@@ -36,10 +31,10 @@ export default async function ShoppingPage() {
       </header>
 
       {/* Formulario rápido para añadir con Autocompletado */}
-      <AddShoppingFormClient uniqueNames={uniqueNames} coupleId={profile.couple_id} />
+      <AddShoppingFormClient uniqueNames={uniqueNames} coupleId={user.couple_id} />
 
       {/* Listas renderizadas en cliente con Real-time */}
-      <ShoppingListClient initialItems={items || []} coupleId={profile.couple_id} />
+      <ShoppingListClient initialItems={items || []} coupleId={user.couple_id} />
     </main>
   )
 }

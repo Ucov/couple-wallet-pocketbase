@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useMemo, useCallback, useTransition } from 'react'
-import { createClient } from '@/utils/supabase/client'
 import ShoppingItem from '@/components/ShoppingItem'
 import { PartyPopper } from 'lucide-react'
 import FinishShoppingButton from '@/components/FinishShoppingModal'
@@ -12,7 +11,6 @@ import { useRouter } from 'next/navigation'
 export default function ShoppingListClient({ initialItems, coupleId }: { initialItems: any[], coupleId: string }) {
   const [items, setItems] = useState(initialItems)
   const [isPending, startTransition] = useTransition()
-  const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
 
   // Sincronizar con props del servidor
@@ -22,21 +20,11 @@ export default function ShoppingListClient({ initialItems, coupleId }: { initial
 
   // Realtime robusto mediante Broadcast + Refresh
   useEffect(() => {
-    const channel = supabase.channel(`sync_shop_${coupleId}`)
-      .on('broadcast', { event: 'update_shopping' }, () => {
-        router.refresh()
-      })
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [coupleId, supabase, router])
+    // PocketBase real-time not implemented yet
+  }, [coupleId, router])
 
   const broadcastSync = () => {
-    supabase.channel(`sync_shop_${coupleId}`).send({
-      type: 'broadcast',
-      event: 'update_shopping',
-      payload: {}
-    })
+    // PocketBase real-time not implemented yet
   }
 
   const handleToggle = (id: string, currentStatus: 'pending' | 'bought') => {
