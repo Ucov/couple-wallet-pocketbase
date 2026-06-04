@@ -10,6 +10,7 @@ import { applyRecurringExpenses } from './recurring-actions'
 import { settleMonth } from './settlement-actions'
 import MonthNavigator from '@/components/MonthNavigator'
 import { leaveCouple } from './setup-couple/actions'
+import { getCategoryIcon } from '@/lib/utils'
 
 import HeroBalanceCard from '@/components/dashboard/HeroBalanceCard'
 import ExpenseAreaChart from '@/components/dashboard/ExpenseAreaChart'
@@ -181,7 +182,7 @@ export default async function Dashboard({
           name: category?.name || 'Sin categoría',
           amount: 0,
           color: category?.color || '#6b7280',
-          icon: category?.icon || '💰'
+          icon: getCategoryIcon(category?.icon, category?.name)
         }
       }
       categoryTotals[catId].amount += amount
@@ -352,7 +353,7 @@ export default async function Dashboard({
                 date={expense.date}
                 paidByStr={expense.paid_by === user.id ? 'Tú' : partnerName}
                 categoryName={category?.name || 'General'}
-                categoryIcon={category?.icon || '💰'}
+                categoryIcon={getCategoryIcon(category?.icon, category?.name)}
                 isRefundable={expense.is_refundable}
                 isTransfer={expense.is_transfer}
               />

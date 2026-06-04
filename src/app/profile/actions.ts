@@ -54,3 +54,19 @@ export async function deleteSubscription(endpoint: string) {
     .eq('user_id', user.id)
     .contains('subscription_json', { endpoint })
 }
+
+export async function generateJoinCode(coupleId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No user' }
+
+  const newCode = Math.random().toString(36).substring(2, 8).toUpperCase()
+  const { error } = await supabase
+    .from('couples')
+    .update({ join_code: newCode })
+    .eq('id', coupleId)
+
+  if (error) return { error: error.message }
+  revalidatePath('/profile')
+  return { success: true, code: newCode }
+}

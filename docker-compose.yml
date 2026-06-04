@@ -1,0 +1,9 @@
+services:
+  couplewallet:
+    build: .
+    container_name: couplewallet
+    restart: unless-stopped
+    ports:
+      - "3005:3000"
+    env_file:
+      - .env.local

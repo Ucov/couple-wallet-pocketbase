@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { Plus } from 'lucide-react'
 import { addShoppingItem } from '@/app/shopping/actions'
 import { createClient } from '@/utils/supabase/client'
+import { toast } from 'sonner'
 
 export default function AddShoppingFormClient({ uniqueNames, coupleId }: { uniqueNames: string[], coupleId: string }) {
   const [name, setName] = useState('')
@@ -20,7 +21,12 @@ export default function AddShoppingFormClient({ uniqueNames, coupleId }: { uniqu
     setName('')
 
     startTransition(async () => {
-      await addShoppingItem(formData)
+      const result = await addShoppingItem(formData)
+      if (result?.error) {
+        toast.error(result.error)
+        return
+      }
+      
       // Broadcast to other clients
       supabase.channel(`sync_shop_${coupleId}`).send({
         type: 'broadcast',

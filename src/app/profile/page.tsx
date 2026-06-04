@@ -9,6 +9,7 @@ import PushNotificationsClient from '@/components/PushNotificationsClient'
 import BackupPanel from './BackupPanel'
 import ColorSelector from './ColorSelector'
 import ThemeToggle from '@/components/ThemeToggle'
+import GenerateJoinCodeButton from '@/components/GenerateJoinCodeButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,14 +60,22 @@ export default async function ProfilePage() {
         <PushNotificationsClient coupleId={profile.couple_id} />
       )}
 
-      {joinCode && (
+      {profile?.couple_id && (
         <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-6 shadow-lg">
           <h2 className="text-sm text-zinc-400 font-semibold uppercase tracking-wider mb-4">Código de Pareja</h2>
           <p className="text-zinc-300 text-sm mb-4">Comparte este código con tu pareja si aún no se ha unido a tu grupo.</p>
-          <div className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl border border-zinc-800">
-            <span className="font-mono text-emerald-400 tracking-widest font-bold text-lg">{joinCode}</span>
-            <CopyCodeButton code={joinCode} />
-          </div>
+          
+          {joinCode ? (
+            <div className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl border border-zinc-800">
+              <span className="font-mono text-emerald-400 tracking-widest font-bold text-lg">{joinCode}</span>
+              <CopyCodeButton code={joinCode} />
+            </div>
+          ) : (
+            <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 p-4 rounded-xl text-sm mb-4">
+              <p>Tu grupo no tiene un código de pareja asignado o no tienes permisos para verlo.</p>
+              <GenerateJoinCodeButton coupleId={profile.couple_id} />
+            </div>
+          )}
           
           <div className="mt-8 pt-6 border-t border-zinc-800">
             <h2 className="text-sm text-zinc-400 font-semibold uppercase tracking-wider mb-4">Copia de Seguridad</h2>

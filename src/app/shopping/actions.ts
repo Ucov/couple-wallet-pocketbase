@@ -30,15 +30,17 @@ export async function addShoppingItem(formData: FormData) {
 
     if (existing) {
       if (existing.status === 'bought') {
-        await supabase.from('shopping_items').update({ status: 'pending' }).eq('id', existing.id)
+        const { error: updateError } = await supabase.from('shopping_items').update({ status: 'pending' }).eq('id', existing.id)
+        if (updateError) return { error: updateError.message }
       }
     } else {
-      await supabase.from('shopping_items').insert({
+      const { error: insertError } = await supabase.from('shopping_items').insert({
         name: name.trim(),
         couple_id: profile.couple_id,
         created_by: user.id,
         status: 'pending'
       })
+      if (insertError) return { error: insertError.message }
     }
 
     revalidatePath('/shopping')
