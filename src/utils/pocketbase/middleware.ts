@@ -23,7 +23,8 @@ export async function updateSession(request: NextRequest) {
 
   try {
     const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL || 'http://192.168.1.11:8090')
-    pb.authStore.loadFromCookie(pbCookie.name + '=' + pbCookie.value);
+    const parsed = JSON.parse(pbCookie.value)
+    pb.authStore.save(parsed.token, parsed.model)
     
     // Si el token es válido, continuamos
     if (!pb.authStore.isValid) {

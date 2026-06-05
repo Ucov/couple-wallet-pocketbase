@@ -9,7 +9,10 @@ export async function createClient() {
   const pbCookie = cookieStore.get('pb_auth');
   
   if (pbCookie) {
-    pb.authStore.loadFromCookie(pbCookie.name + '=' + pbCookie.value);
+    try {
+      const parsed = JSON.parse(pbCookie.value);
+      pb.authStore.save(parsed.token, parsed.model);
+    } catch(e) {}
   }
   
   try {

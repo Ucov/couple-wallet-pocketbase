@@ -5,22 +5,17 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/pocketbase/server'
 import { cookies } from 'next/headers'
 
-async function setAuthCookie(cookieStr: string) {
-  // PocketBase devuelve un string largo de cookie, tenemos que setearlo en Next
+async function setAuthCookie(pb: any) {
   const cookieStore = await cookies()
-  const parts = cookieStr.split(';')
-  const firstPart = parts[0].split('=')
+  const authData = JSON.stringify({ token: pb.authStore.token, model: pb.authStore.model })
   
-  if (firstPart.length === 2) {
-    // Para simplificar, confiamos en PocketBase exportToCookie pero lo seteamos con next
-    // @ts-ignore
-    cookieStore.set(firstPart[0], firstPart[1], {
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        httpOnly: false
-    })
-  }
+  cookieStore.set('pb_auth', authData, {
+      path: '/',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      httpOnly: false,
+      maxAge: 60 * 60 * 24 * 7 // 7 dias de sesion
+  })
 }
 
 export async function login(formData: FormData) {
@@ -31,7 +26,7 @@ export async function login(formData: FormData) {
 
   try {
     await pb.collection('users').authWithPassword(email, password)
-    await setAuthCookie(pb.authStore.exportToCookie())
+    await setAuthCookie(pb)
   } catch (error: any) {
     console.error('Login error:', error)
     redirect('/login?message=Could not authenticate user')
@@ -55,7 +50,7 @@ export async function signup(formData: FormData) {
     })
     // Auto login
     await pb.collection('users').authWithPassword(email, password)
-    await setAuthCookie(pb.authStore.exportToCookie())
+    await setAuthCookie(pb)
   } catch (error: any) {
     redirect(`/login?message=${encodeURIComponent(error.message)}`)
   }
