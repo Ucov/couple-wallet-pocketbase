@@ -5,8 +5,11 @@ import { generateJoinCode } from '@/app/profile/actions'
 import { toast } from 'sonner'
 import { RefreshCw } from 'lucide-react'
 
+import { useRouter } from 'next/navigation'
+
 export default function GenerateJoinCodeButton({ coupleId }: { coupleId: string }) {
   const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
 
   const handleGenerate = async () => {
     setIsLoading(true)
@@ -16,6 +19,7 @@ export default function GenerateJoinCodeButton({ coupleId }: { coupleId: string 
         toast.error('Error: ' + res.error)
       } else {
         toast.success('Código generado con éxito: ' + res.code)
+        router.refresh()
       }
     } catch (e: any) {
       toast.error('Error al generar código: ' + e.message)

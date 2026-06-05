@@ -58,9 +58,12 @@ export default async function ProfilePage() {
           <p className="text-zinc-300 text-sm mb-4">Comparte este código con tu pareja si aún no se ha unido a tu grupo.</p>
           
           {joinCode ? (
-            <div className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl border border-zinc-800">
-              <span className="font-mono text-emerald-400 tracking-widest font-bold text-lg">{joinCode}</span>
-              <CopyCodeButton code={joinCode} />
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl border border-zinc-800">
+                <span className="font-mono text-emerald-400 tracking-widest font-bold text-lg">{joinCode}</span>
+                <CopyCodeButton code={joinCode} />
+              </div>
+              <GenerateJoinCodeButton coupleId={user.couple_id} />
             </div>
           ) : (
             <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 p-4 rounded-xl text-sm mb-4">
