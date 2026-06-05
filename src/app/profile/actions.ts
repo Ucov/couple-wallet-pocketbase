@@ -70,13 +70,18 @@ export async function generateJoinCode(coupleId: string) {
   
   try {
     const couple = await pb.collection('couples').getOne(coupleId)
-    const coupleName = couple.name && couple.name.trim() !== '' ? couple.name : 'Mi Pareja'
+    const coupleName = (couple.name && couple.name.trim() !== '') ? couple.name : 'Pareja de prueba'
+    
+    console.log(">> ACTUALIZANDO PAREJA", coupleId)
+    console.log(">> CON DATOS:", { join_code: newCode, name: coupleName })
+
     await pb.collection('couples').update(coupleId, { 
       join_code: newCode,
       name: coupleName
     })
   } catch (error: any) {
-    return { error: error.message }
+    console.error(">> ERROR DE POCKETBASE:", error.data || error)
+    return { error: `Error PB: ${JSON.stringify(error.data || error.message)}` }
   }
 
   revalidatePath('/profile')
