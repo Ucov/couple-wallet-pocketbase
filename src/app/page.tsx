@@ -287,11 +287,13 @@ export default async function Dashboard({
         
         if (futureTransfers.length > 0) {
           const settledMonthName = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(new Date(futureTransfers[0].date))
-          settlementMessage = `Saldado en ${settledMonthName}`
-          settlementSubMessage = ''
-          showSettleButton = false
-          debtAmount = 0
+          settlementMessage = `Saldado en ${settledMonthName} ✅`
+        } else {
+          settlementMessage = `Compensado posteriormente ✅`
         }
+        settlementSubMessage = ''
+        showSettleButton = false
+        debtAmount = 0
       }
     }
   }
