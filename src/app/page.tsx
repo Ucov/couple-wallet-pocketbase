@@ -94,30 +94,28 @@ export default async function Dashboard({
 
   await applyRecurring
 
-  let expensesFilter = `date >= "${startOfMonth.toISOString().replace('T', ' ')}" && date <= "${endOfMonth.toISOString().replace('T', ' ')}"`
-  let prevExpensesFilter = `date >= "${prevMonthStart.toISOString().replace('T', ' ')}" && date <= "${prevMonthEnd.toISOString().replace('T', ' ')}" && is_transfer=false`
-  
-  if (userProfile?.couple_id) {
-    expensesFilter += ` && couple_id="${userProfile.couple_id}"`
-    prevExpensesFilter += ` && couple_id="${userProfile.couple_id}"`
-  } else {
-    expensesFilter += ` && paid_by="${user.id}"`
-    prevExpensesFilter += ` && paid_by="${user.id}"`
-  }
+  let allExpensesFilter = userProfile?.couple_id 
+    ? `couple_id="${userProfile.couple_id}"` 
+    : `paid_by="${user.id}"`
 
-  let expenses: any[] = []
+  let allExpenses: any[] = []
   try {
-    expenses = await pb.collection('expenses').getFullList({
-        filter: expensesFilter,
+    allExpenses = await pb.collection('expenses').getFullList({
+        filter: allExpensesFilter,
         sort: '-date',
         expand: 'category_id'
     })
-  } catch(e) { console.error('Error fetching expenses:', e) }
+  } catch(e) { console.error('Error fetching all expenses:', e) }
 
-  let prevExpenses: any[] = []
-  try {
-    prevExpenses = await pb.collection('expenses').getFullList({ filter: prevExpensesFilter })
-  } catch(e) {}
+  const expenses = allExpenses.filter((e: any) => {
+    const d = new Date(e.date)
+    return d >= startOfMonth && d <= endOfMonth
+  })
+
+  const prevExpenses = allExpenses.filter((e: any) => {
+    const d = new Date(e.date)
+    return d >= prevMonthStart && d <= prevMonthEnd && !e.is_transfer
+  })
 
   if (partnerData?.name) partnerName = partnerData.name
 
@@ -220,32 +218,81 @@ export default async function Dashboard({
   let isOwed = false
 
   if (userProfile?.couple_id) {
+    const viewedExpenses = allExpenses.filter((e: any) => new Date(e.date) <= endOfMonth)
+    
+    let myNorm = 0, partNorm = 0, myRef = 0, partRef = 0, myTrans = 0, partTrans = 0
+    viewedExpenses.forEach(exp => {
+      const amount = Number(exp.amount)
+      if (exp.is_transfer) {
+        if (exp.paid_by === user.id) myTrans += amount
+        else partTrans += amount
+      } else if (exp.is_refundable) {
+        if (exp.paid_by === user.id) myRef += amount
+        else partRef += amount
+      } else {
+        if (exp.paid_by === user.id) myNorm += amount
+        else partNorm += amount
+      }
+    })
+    
     const mySplitPercentage = userProfile?.split_percentage ?? 50
-    
-    const normalTotal = myNormalTotal + partnerNormalTotal
-    const myExpectedNormalShare = normalTotal * (mySplitPercentage / 100)
-    
-    let myBalance = myExpectedNormalShare - myNormalTotal // >0 = I underpaid normal expenses
-    myBalance += partnerRefundableTotal // I owe 100% of their refundable expenses
-    myBalance -= myRefundableTotal // They owe 100% of my refundable expenses
-    
-    // Aplicar transferencias internas (Bizums)
-    myBalance -= myTransfersSent // Yo te pagué deuda, así que te debo menos
-    myBalance += partnerTransfersSent // Tú me pagaste deuda, así que te debo más
+    const normalTotal = myNorm + partNorm
+    let myBalance = (normalTotal * (mySplitPercentage / 100)) - myNorm
+    myBalance += partRef - myRef - myTrans + partTrans
     
     debtAmount = Math.abs(myBalance)
-    if (myBalance < -0.01) { // I overpaid overall
+
+    if (myBalance < -0.01) {
       settlementMessage = 'Te deben un Bizum de:'
       settlementSubMessage = partnerName
       isOwed = true
       showSettleButton = debtAmount > 0.01
-    } else if (myBalance > 0.01) { // I underpaid overall
+    } else if (myBalance > 0.01) {
       settlementMessage = 'Tienes que hacer un Bizum de:'
       settlementSubMessage = `a ${partnerName}`
       isOwed = false
       showSettleButton = debtAmount > 0.01
     } else if (totalMonth > 0 || myTransfersSent > 0 || partnerTransfersSent > 0) {
       settlementMessage = 'Estáis completamente en paz 🍻'
+    }
+
+    if (showSettleButton && debtAmount > 0.01) {
+      let currMyNorm = 0, currPartNorm = 0, currMyRef = 0, currPartRef = 0, currMyTrans = 0, currPartTrans = 0
+      allExpenses.forEach(exp => {
+        const amount = Number(exp.amount)
+        if (exp.is_transfer) {
+          if (exp.paid_by === user.id) currMyTrans += amount
+          else currPartTrans += amount
+        } else if (exp.is_refundable) {
+          if (exp.paid_by === user.id) currMyRef += amount
+          else currPartRef += amount
+        } else {
+          if (exp.paid_by === user.id) currMyNorm += amount
+          else currPartNorm += amount
+        }
+      })
+      
+      let currBalance = (currMyNorm + currPartNorm) * (mySplitPercentage / 100) - currMyNorm
+      currBalance += currPartRef - currMyRef - currMyTrans + currPartTrans
+      const currDebtAmount = Math.abs(currBalance)
+      
+      const isSettled = currDebtAmount < 0.01 || (isOwed ? currBalance > -0.01 : currBalance < 0.01)
+      
+      if (isSettled) {
+        const futureTransfers = allExpenses.filter(e => 
+          e.is_transfer && 
+          new Date(e.date) > endOfMonth && 
+          e.paid_by === (isOwed ? partnerData?.id : user.id)
+        ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        
+        if (futureTransfers.length > 0) {
+          const settledMonthName = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(new Date(futureTransfers[0].date))
+          settlementMessage = `Saldado en ${settledMonthName}`
+          settlementSubMessage = ''
+          showSettleButton = false
+          debtAmount = 0
+        }
+      }
     }
   }
 
