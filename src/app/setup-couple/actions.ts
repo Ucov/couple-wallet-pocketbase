@@ -34,19 +34,29 @@ export async function joinCouple(formData: FormData) {
   if (!pb.authStore.isValid) throw new Error('Not authenticated')
   const user = pb.authStore.model
 
-  const joinCode = (formData.get('join_code') as string).toUpperCase()
+  const joinCode = (formData.get('join_code') as string).trim().toUpperCase()
+
+  if (!joinCode) {
+    redirect(`/setup-couple?message=${encodeURIComponent('Introduce un código de invitación')}`)
+  }
 
   let couple: any = null
   try {
     couple = await pb.collection('couples').getFirstListItem(`join_code="${joinCode}"`)
-  } catch (coupleError) {
-    redirect(`/setup-couple?message=Código no válido`)
+  } catch (coupleError: any) {
+    console.error('Join code lookup failed:', coupleError?.message, coupleError?.response)
+    redirect(`/setup-couple?message=${encodeURIComponent('Código no válido o no encontrado')}`)
+  }
+
+  if (!couple) {
+    redirect(`/setup-couple?message=${encodeURIComponent('Código no válido')}`)
   }
 
   try {
     await pb.collection('users').update(user!.id, { couple_id: couple.id })
   } catch (profileError: any) {
-    redirect(`/setup-couple?message=${encodeURIComponent(profileError.message)}`)
+    console.error('User update failed:', profileError?.message, profileError?.response)
+    redirect(`/setup-couple?message=${encodeURIComponent('Error al unirse: ' + profileError.message)}`)
   }
 
   revalidatePath('/')

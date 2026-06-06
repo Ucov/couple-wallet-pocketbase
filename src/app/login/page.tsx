@@ -8,7 +8,7 @@ export default async function LoginPage({
   const { message } = await searchParams
 
   return (
-    <div className="flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2 h-screen max-h-screen">
+    <div className="flex-1 flex flex-col w-full px-8 sm:max-w-md mx-auto justify-center gap-2 h-screen max-h-screen">
       <form className="animate-in flex-1 flex flex-col w-full justify-center gap-2 text-foreground">
         <h1 className="text-3xl font-bold text-center mb-8">CoupleWallet</h1>
         

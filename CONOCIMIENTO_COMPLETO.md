@@ -93,6 +93,27 @@ Durante el uso de Next.js Server Actions en la lista de compras y tareas, la app
   }
   ```
 
+### Problemas de Vinculación y Código de Pareja (join_code)
+- **Problema:** Los usuarios no podían unirse a un grupo con el código (error "Código no válido") y había errores de codificación en el `redirect` (`CÃ³digo no vÃ¡lido`).
+- **Causa Raíz 1 (Encoding):** `redirect(\`/setup-couple?message=Código no válido\`)` enviaba los acentos directamente en la URL, rompiendo el encoding. **Solución:** Usar siempre `encodeURIComponent('Mensaje con acentos')` en los redirects.
+- **Causa Raíz 2 (Esquema PocketBase):** La colección `couples` no tenía el campo `join_code` expuesto correctamente, y las **API Rules** impedían buscar por código a usuarios sin `couple_id`.
+- **Solución implementada:** 
+  - Se añadió el campo `join_code` (text) al esquema de `couples`.
+  - Se actualizaron las API Rules de `couples`:
+    - `listRule`: `@request.auth.id != '' || join_code != ''`
+    - `viewRule`: `@request.auth.id != ''`
+  - Se rediseñó el botón "Generar nuevo código" en `/profile` para mostrar el código de forma persistente y premium, permitiendo copiarlo fácilmente.
+  - Se centró la página de `/login` en resoluciones de escritorio.
+
+### Categorías de PocketBase
+- Se han actualizado directamente en la base de datos de producción las categorías disponibles:
+  - 🛒 **Supermercado** (Renombrada desde Alimentación)
+  - 🏠 **Hogar**
+  - 🎉 **Ocio**
+  - 💊 **Salud**
+  - 🚗 **Transporte** (Añadida)
+  - 📦 **Otros** (Añadida)
+
 ---
 
 ## 🚀 Plan de Implementación de Novedades (Checklist Pendiente)
