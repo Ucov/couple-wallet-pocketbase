@@ -7,3 +7,9 @@ services:
       - "3005:3000"
     env_file:
       - .env.local
+    labels:
+      - homepage.group=Finanzas
+      - homepage.name=CoupleWallet
+      - homepage.icon=https://wallet.unai-lab.duckdns.org/icon-192x192.png
+      - homepage.href=https://wallet.unai-lab.duckdns.org
+      - homepage.description=App de gestión económica
