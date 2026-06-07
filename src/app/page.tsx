@@ -305,9 +305,8 @@ export default async function Dashboard({
     } else if (totalMonth > 0 || myTransfersSent > 0 || partnerTransfersSent > 0) {
       settlementMessage = 'Estáis completamente en paz 🍻'
     }
-
-    }
   }
+
 
   const monthName = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(startOfMonth)
 
