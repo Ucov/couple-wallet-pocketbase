@@ -8,7 +8,7 @@ import { getChoreIcon } from '@/utils/choreIcons'
 interface Chore {
   id: string
   title: string
-  is_done: boolean
+  is_completed: boolean
   assigned_to: string | null
 }
 
@@ -42,8 +42,8 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
     // PocketBase real-time not implemented yet
   }
 
-  const pendingChores = chores.filter(c => !c.is_done)
-  const doneChores = chores.filter(c => c.is_done)
+  const pendingChores = chores.filter(c => !c.is_completed)
+  const doneChores = chores.filter(c => c.is_completed)
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,7 +51,7 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
     const tempTitle = newTitle
     // Optimistic: add immediately
     const tempId = crypto.randomUUID()
-    setChores(prev => [{ id: tempId, title: tempTitle, is_done: false, assigned_to: null }, ...prev])
+    setChores(prev => [{ id: tempId, title: tempTitle, is_completed: false, assigned_to: null }, ...prev])
     setNewTitle('')
     startTransition(async () => { 
       await addChore(tempTitle) 
@@ -60,7 +60,7 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
   }
 
   const handleToggle = (id: string, currentStatus: boolean) => {
-    setChores(prev => prev.map(c => c.id === id ? { ...c, is_done: !currentStatus } : c))
+    setChores(prev => prev.map(c => c.id === id ? { ...c, is_completed: !currentStatus } : c))
     startTransition(async () => { 
       const res = await toggleChoreStatus(id, !currentStatus)
       if (res?.error) alert('Error: ' + res.error)
@@ -117,7 +117,7 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
               return (
                 <div
                   key={chore.id}
-                  onClick={() => handleToggle(chore.id, chore.is_done)}
+                  onClick={() => handleToggle(chore.id, chore.is_completed)}
                   className="relative group flex flex-col items-center justify-center p-4 min-w-[90px] max-w-[110px] rounded-2xl transition-all duration-200 shadow-sm cursor-pointer active:scale-95 select-none bg-emerald-600 hover:bg-emerald-500 border border-emerald-500 shadow-emerald-900/20"
                 >
                   <div className="mb-2 drop-shadow-md">
@@ -144,7 +144,7 @@ export default function ChoresClient({ initialChores, coupleId, currentUserId, c
               return (
                 <div
                   key={chore.id}
-                  onClick={() => handleToggle(chore.id, chore.is_done)}
+                  onClick={() => handleToggle(chore.id, chore.is_completed)}
                   className="relative group flex flex-col items-center justify-center p-4 min-w-[90px] max-w-[110px] rounded-2xl transition-all duration-200 shadow-sm cursor-pointer active:scale-95 select-none bg-zinc-900 border border-zinc-800/80 opacity-70 grayscale"
                 >
                   <div className="mb-2 scale-90 opacity-50">
