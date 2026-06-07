@@ -218,6 +218,8 @@ export default async function Dashboard({
   let isOwed = false
   let prevDebtAmount = 0
   let prevIsOwed = false
+  let currMonthDebtAmount = 0
+  let currMonthIsOwed = false
 
   if (userProfile?.couple_id) {
     const mySplitPercentage = userProfile?.split_percentage ?? 50
@@ -266,6 +268,28 @@ export default async function Dashboard({
     let myBalance = (normalTotal * (mySplitPercentage / 100)) - myNorm
     myBalance += partRef - myRef - myTrans + partTrans
     
+    // Calcular balance SOLO del mes actual (para mostrar el desglose)
+    const currentMonthExpenses = expenses
+    let currMyNorm = 0, currPartNorm = 0, currMyRef = 0, currPartRef = 0, currMyTrans = 0, currPartTrans = 0
+    currentMonthExpenses.forEach((exp: any) => {
+      const amount = Number(exp.amount)
+      if (exp.is_transfer) {
+        if (exp.paid_by === user.id) currMyTrans += amount
+        else currPartTrans += amount
+      } else if (exp.is_refundable) {
+        if (exp.paid_by === user.id) currMyRef += amount
+        else currPartRef += amount
+      } else {
+        if (exp.paid_by === user.id) currMyNorm += amount
+        else currPartNorm += amount
+      }
+    })
+    const currNormalTotal = currMyNorm + currPartNorm
+    let currMyBalance = (currNormalTotal * (mySplitPercentage / 100)) - currMyNorm
+    currMyBalance += currPartRef - currMyRef - currMyTrans + currPartTrans
+    currMonthDebtAmount = Math.abs(currMyBalance)
+    currMonthIsOwed = currMyBalance < -0.01
+
     debtAmount = Math.abs(myBalance)
 
     if (myBalance < -0.01) {
@@ -282,45 +306,6 @@ export default async function Dashboard({
       settlementMessage = 'Estáis completamente en paz 🍻'
     }
 
-    if (showSettleButton && debtAmount > 0.01) {
-      let currMyNorm = 0, currPartNorm = 0, currMyRef = 0, currPartRef = 0, currMyTrans = 0, currPartTrans = 0
-      allExpenses.forEach(exp => {
-        const amount = Number(exp.amount)
-        if (exp.is_transfer) {
-          if (exp.paid_by === user.id) currMyTrans += amount
-          else currPartTrans += amount
-        } else if (exp.is_refundable) {
-          if (exp.paid_by === user.id) currMyRef += amount
-          else currPartRef += amount
-        } else {
-          if (exp.paid_by === user.id) currMyNorm += amount
-          else currPartNorm += amount
-        }
-      })
-      
-      let currBalance = (currMyNorm + currPartNorm) * (mySplitPercentage / 100) - currMyNorm
-      currBalance += currPartRef - currMyRef - currMyTrans + currPartTrans
-      const currDebtAmount = Math.abs(currBalance)
-      
-      const isSettled = currDebtAmount < 0.01 || (isOwed ? currBalance > -0.01 : currBalance < 0.01)
-      
-      if (isSettled) {
-        const futureTransfers = allExpenses.filter(e => 
-          e.is_transfer && 
-          new Date(e.date) > endOfMonth && 
-          e.paid_by === (isOwed ? partnerData?.id : user.id)
-        ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        
-        if (futureTransfers.length > 0) {
-          const settledMonthName = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(new Date(futureTransfers[0].date))
-          settlementMessage = `Saldado en ${settledMonthName} ✅`
-        } else {
-          settlementMessage = `Compensado posteriormente ✅`
-        }
-        settlementSubMessage = ''
-        showSettleButton = false
-        debtAmount = 0
-      }
     }
   }
 
@@ -368,6 +353,8 @@ export default async function Dashboard({
           partnerName={partnerName}
           prevDebtAmount={prevDebtAmount}
           prevIsOwed={prevIsOwed}
+          currMonthDebtAmount={currMonthDebtAmount}
+          currMonthIsOwed={currMonthIsOwed}
           settleAction={userProfile?.couple_id && partnerData?.id ? settleMonth.bind(null, userProfile.couple_id, currentMonth, currentYear, debtAmount, isOwed ? partnerData.id : user.id) : undefined}
         />
       </section>

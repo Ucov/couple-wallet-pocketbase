@@ -15,6 +15,8 @@ interface HeroBalanceCardProps {
   partnerName: string
   prevDebtAmount: number
   prevIsOwed: boolean
+  currMonthDebtAmount: number
+  currMonthIsOwed: boolean
   settleAction?: (payload: FormData) => void
 }
 
@@ -29,6 +31,8 @@ export default function HeroBalanceCard({
   partnerName,
   prevDebtAmount,
   prevIsOwed,
+  currMonthDebtAmount,
+  currMonthIsOwed,
   settleAction,
 }: HeroBalanceCardProps) {
   // Animated number
@@ -60,17 +64,35 @@ export default function HeroBalanceCard({
         <p className="text-zinc-300 font-medium mb-1">{settlementMessage}</p>
         
         {debtAmount > 0.01 ? (
-          <div className="flex flex-col items-center justify-center mt-1 mb-5">
+          <div className="flex flex-col items-center justify-center mt-1 mb-5 w-full">
             <motion.span 
               className={`text-6xl font-black tracking-tighter ${isOwed ? 'text-emerald-400' : 'text-red-400'}`}
             >
               {displayValue}
             </motion.span>
             <span className="text-zinc-500 mt-1 font-medium">{settlementSubMessage}</span>
+            
             {prevDebtAmount > 0.01 && (
-              <span className={`text-xs mt-2 px-3 py-1 rounded-full font-medium border ${prevIsOwed ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
-                Incluye €{prevDebtAmount.toFixed(2)} de meses anteriores
-              </span>
+              <div className="w-full mt-4 bg-zinc-900/60 rounded-xl p-3 border border-zinc-800/80 text-sm">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-zinc-400">Deuda anterior arrastrada:</span>
+                  <span className={`font-semibold ${prevIsOwed ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {prevIsOwed ? '+' : '-'}€{prevDebtAmount.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pb-2 border-b border-zinc-800">
+                  <span className="text-zinc-400">Generada este mes:</span>
+                  <span className={`font-semibold ${currMonthIsOwed ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {currMonthIsOwed ? '+' : '-'}€{currMonthDebtAmount.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-2">
+                  <span className="text-zinc-300 font-medium">Total acumulado:</span>
+                  <span className={`font-bold ${isOwed ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {isOwed ? '+' : '-'}€{debtAmount.toFixed(2)}
+                  </span>
+                </div>
+              </div>
             )}
           </div>
         ) : (
