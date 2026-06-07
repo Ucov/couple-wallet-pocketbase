@@ -10,10 +10,19 @@ export async function settleMonth(coupleId: string, month: number, year: number,
   const user = pb.authStore.model
 
   try {
+    let settleDate = new Date()
+    const currentMonth = settleDate.getMonth()
+    const currentYear = settleDate.getFullYear()
+
+    // Si se está saldando un mes anterior, usar el último día de ese mes a las 23:59:59
+    if (month !== currentMonth || year !== currentYear) {
+      settleDate = new Date(year, month + 1, 0, 23, 59, 59)
+    }
+
     await pb.collection('expenses').create({
       amount: amount,
       concept: 'Liquidación (Bizum)',
-      date: new Date().toISOString(),
+      date: settleDate.toISOString(),
       paid_by: debtorId,
       couple_id: coupleId,
       is_transfer: true,
