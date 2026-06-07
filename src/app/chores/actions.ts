@@ -35,8 +35,7 @@ export async function toggleChoreStatus(id: string, isDone: boolean) {
 
     try {
       await pb.collection('chores').update(id, { 
-        is_done: isDone,
-        completed_at: isDone ? new Date().toISOString() : null
+        is_done: isDone
       })
     } catch (error: any) {
       return { error: error.message }
