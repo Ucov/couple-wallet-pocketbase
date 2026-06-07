@@ -7,7 +7,6 @@ export async function settleMonth(coupleId: string, month: number, year: number,
   const pb = await createClient()
 
   if (!pb.authStore.isValid) throw new Error('Not authenticated')
-  const user = pb.authStore.model
 
   try {
     let settleDate = new Date()
