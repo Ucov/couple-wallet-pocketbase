@@ -13,6 +13,8 @@ interface HeroBalanceCardProps {
   myTotal: number
   partnerTotal: number
   partnerName: string
+  prevDebtAmount: number
+  prevIsOwed: boolean
   settleAction?: (payload: FormData) => void
 }
 
@@ -25,6 +27,8 @@ export default function HeroBalanceCard({
   myTotal,
   partnerTotal,
   partnerName,
+  prevDebtAmount,
+  prevIsOwed,
   settleAction,
 }: HeroBalanceCardProps) {
   // Animated number
@@ -63,6 +67,11 @@ export default function HeroBalanceCard({
               {displayValue}
             </motion.span>
             <span className="text-zinc-500 mt-1 font-medium">{settlementSubMessage}</span>
+            {prevDebtAmount > 0.01 && (
+              <span className={`text-xs mt-2 px-3 py-1 rounded-full font-medium border ${prevIsOwed ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                Incluye €{prevDebtAmount.toFixed(2)} de meses anteriores
+              </span>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center mt-3 mb-5">
