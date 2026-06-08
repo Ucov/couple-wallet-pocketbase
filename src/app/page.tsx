@@ -290,20 +290,70 @@ export default async function Dashboard({
     currMonthDebtAmount = Math.abs(currMyBalance)
     currMonthIsOwed = currMyBalance < -0.01
 
+    // Comprobar si la deuda de este mes fue compensada en meses posteriores
+    let futureGlobalBalance = myBalance
+    let isSettled = false
+    let settledMonthName = ''
+    
+    // Solo comprobamos si hay una deuda real (> 0.01€)
+    if (Math.abs(myBalance) > 0.01) {
+      const initialSign = Math.sign(myBalance)
+      
+      // Filtramos solo los gastos que ocurrieron DESPUÉS del mes que estamos mirando
+      // y los ordenamos de más antiguo a más nuevo (cronológicamente)
+      const futureExpenses = (allExpenses || [])
+        .filter((e: any) => new Date(e.date) > endOfMonth)
+        .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        
+      for (const exp of futureExpenses) {
+        const amount = Number(exp.amount)
+        if (exp.is_transfer) {
+          if (exp.paid_by === user.id) futureGlobalBalance -= amount
+          else futureGlobalBalance += amount
+        } else if (exp.is_refundable) {
+          if (exp.paid_by === user.id) futureGlobalBalance -= amount
+          else futureGlobalBalance += amount
+        } else {
+          const myShare = amount * (mySplitPercentage / 100)
+          if (exp.paid_by === user.id) futureGlobalBalance += (myShare - amount)
+          else futureGlobalBalance += myShare
+        }
+        
+        // Si el balance cruza el cero o se queda muy cerca (margen de error), la deuda se saldó
+        if (Math.abs(futureGlobalBalance) < 0.5 || Math.sign(futureGlobalBalance) !== initialSign) {
+          isSettled = true
+          settledMonthName = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(new Date(exp.date))
+          settledMonthName = settledMonthName.charAt(0).toUpperCase() + settledMonthName.slice(1)
+          break // Rompemos el bucle porque ya se ha saldado
+        }
+      }
+    }
+
+    // Inicialmente el número gigante que mostraremos es el balance real del mes
     debtAmount = Math.abs(myBalance)
 
-    if (myBalance < -0.01) {
-      settlementMessage = 'Te deben un Bizum de:'
-      settlementSubMessage = partnerName
-      isOwed = true
-      showSettleButton = debtAmount > 0.01
-    } else if (myBalance > 0.01) {
-      settlementMessage = 'Tienes que hacer un Bizum de:'
-      settlementSubMessage = `a ${partnerName}`
+    // ¡CRÍTICO! Si se detecta que se ha saldado, ponemos debtAmount a 0 
+    // para que la UI muestre el Check Verde en vez del número rojo.
+    if (isSettled) {
+      settlementMessage = `Deuda saldada en ${settledMonthName} 🍻`
+      settlementSubMessage = ''
       isOwed = false
-      showSettleButton = debtAmount > 0.01
-    } else if (totalMonth > 0 || myTransfersSent > 0 || partnerTransfersSent > 0) {
-      settlementMessage = 'Estáis completamente en paz 🍻'
+      showSettleButton = false
+      debtAmount = 0 // <-- MUY IMPORTANTE
+    } else {
+      if (myBalance < -0.01) { // Yo he pagado de más
+        settlementMessage = 'Te deben un Bizum de:'
+        settlementSubMessage = partnerName
+        isOwed = true
+        showSettleButton = debtAmount > 0.01
+      } else if (myBalance > 0.01) { // Yo debo dinero
+        settlementMessage = 'Tienes que hacer un Bizum de:'
+        settlementSubMessage = `a ${partnerName}`
+        isOwed = false
+        showSettleButton = debtAmount > 0.01
+      } else if (totalMonth > 0 || currMonthDebtAmount > 0 || myTransfersSent > 0 || partnerTransfersSent > 0) {
+        settlementMessage = 'Estáis completamente en paz 🍻'
+      }
     }
   }
 
