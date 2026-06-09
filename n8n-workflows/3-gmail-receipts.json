@@ -1,0 +1,170 @@
+{
+  "name": "3. Gmail a PocketBase (Recibos Digitales)",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "query": "category:purchases newer_than:1d",
+        "format": "resolved"
+      },
+      "id": "1",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-oauth-id",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "gemini-2.5-flash",
+        "prompt": "={{ 'Analiza el contenido de este correo electrónico de una compra online:\\n\\n' + $json.textPlain + '\\n\\nExtrae lo siguiente en formato JSON (sin markdown, solo llaves):\\n- amount: número con decimales de la cantidad total pagada (ej: 45.90)\\n- concept: el nombre del comercio y un resumen (ej: Compra en Amazon)\\n- category_id: elige UNO de estos IDs según el tipo de comercio: [mo7ofahojbowkul (Supermercado), 3jfwy3be7egdmp6 (Hogar), ftnun201c70w5zp (Ocio), uhbj70c2yoe086m (Salud), zg8u6sk78sxovdh (Transporte), ik13jysxf9eosaz (Otros)]' }}"
+      },
+      "id": "2",
+      "name": "Extraer Datos (Gemini)",
+      "type": "n8n-nodes-base.googleGemini",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "gemini-api-id",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.1.11:8090/api/collections/users/auth-with-password",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "identity",
+              "value": "unasev48@gmail.com"
+            },
+            {
+              "name": "password",
+              "value": "uVVcOMgRKfr1Rbj2"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3",
+      "name": "Login PocketBase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [400, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.1.11:8090/api/collections/expenses/records",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $node[\"Login PocketBase\"].json.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "amount",
+              "value": "={{ JSON.parse($node[\"Extraer Datos (Gemini)\"].json.text).amount }}"
+            },
+            {
+              "name": "concept",
+              "value": "={{ JSON.parse($node[\"Extraer Datos (Gemini)\"].json.text).concept }}"
+            },
+            {
+              "name": "category_id",
+              "value": "={{ JSON.parse($node[\"Extraer Datos (Gemini)\"].json.text).category_id }}"
+            },
+            {
+              "name": "paid_by",
+              "value": "2h1lz0rpecv0xxl"
+            },
+            {
+              "name": "couple_id",
+              "value": "ea2qgsi5irdykzc"
+            },
+            {
+              "name": "date",
+              "value": "={{ new Date().toISOString() }}"
+            },
+            {
+              "name": "type",
+              "value": "EXPENSE"
+            },
+            {
+              "name": "is_refundable",
+              "value": "false"
+            },
+            {
+              "name": "status",
+              "value": "COMPLETED"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4",
+      "name": "Crear Gasto en PB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [600, 0]
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extraer Datos (Gemini)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Datos (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "Login PocketBase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Login PocketBase": {
+      "main": [
+        [
+          {
+            "node": "Crear Gasto en PB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}

@@ -64,6 +64,7 @@ supabase/migrations/              # SQL de inicialización + parches RLS
 - [x] **Selector de fecha**: permitido elegir fecha de gasto en el pasado (con validación para evitar fechas futuras) tanto en creación como edición.
 - [x] Gastos recurrentes (`recurring-actions.ts`) y cierre mensual (`settlement-actions.ts`).
 - [x] PWA básica vía `@ducanh2912/next-pwa`.
+- [x] **Ingesta Automatizada (n8n)**: Flujos externos en servidor homelab para registrar gastos automáticamente vía Webhook desde MacroDroid (notificaciones bancarias), IMAP (emails de recibos digitales), y un App Scanner (OCR de tickets mediante Vision AI Gemini).
 
 ## Funcionalidad pendiente
 

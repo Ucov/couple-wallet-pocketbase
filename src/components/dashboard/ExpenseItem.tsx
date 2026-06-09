@@ -14,6 +14,7 @@ interface ExpenseItemProps {
   categoryIcon: string
   isRefundable?: boolean
   isTransfer?: boolean
+  status?: string
 }
 
 export default function ExpenseItem({
@@ -25,7 +26,8 @@ export default function ExpenseItem({
   categoryName,
   categoryIcon,
   isRefundable,
-  isTransfer
+  isTransfer,
+  status
 }: ExpenseItemProps) {
   // Define colors based on type
   const isBizum = isTransfer
@@ -44,6 +46,8 @@ export default function ExpenseItem({
             {concept}
             {isBizum && <span className="text-[10px] bg-purple-950 text-purple-400 px-2 py-0.5 rounded-full uppercase font-bold tracking-widest border border-purple-800">Bizum</span>}
             {isRefundable && <span className="text-[10px] bg-amber-950/50 text-amber-500 px-2 py-0.5 rounded-full uppercase font-bold tracking-widest border border-amber-900/50">Deuda</span>}
+            {status === 'PENDING_AI' && <span className="text-[10px] bg-indigo-950/50 text-indigo-400 px-2 py-0.5 rounded-full uppercase font-bold tracking-widest border border-indigo-900/50 flex items-center gap-1"><span className="animate-pulse">🤖</span> IA</span>}
+            {status === 'MISSING_RECEIPT' && <span className="text-[10px] bg-orange-950/50 text-orange-400 px-2 py-0.5 rounded-full uppercase font-bold tracking-widest border border-orange-900/50 flex items-center gap-1">📎 Falta Ticket</span>}
           </p>
           <p className="text-xs text-zinc-500 mt-0.5">
             {new Date(date).toLocaleDateString('es-ES')} • {isBizum ? 'Transferencia' : categoryName}

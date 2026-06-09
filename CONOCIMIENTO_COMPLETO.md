@@ -114,6 +114,12 @@ Durante el uso de Next.js Server Actions en la lista de compras y tareas, la app
   - 🚗 **Transporte** (Añadida)
   - 📦 **Otros** (Añadida)
 
+### Automatización con n8n y Gemini API
+- **Problema de variables de entorno en n8n:** Al configurar nodos de n8n con expresiones dinámicas que hacían uso de `$env.GEMINI_API_KEY`, el flujo fallaba silenciosamente o con errores de expresión en tiempo de ejecución. **Solución:** n8n por defecto bloquea el acceso al entorno. Se modificó el `docker-compose.yml` del servidor homelab para inyectar `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`.
+- **API Nodes vía Scripting (Automatización del homelab):** Al actualizar nodos de n8n directamente mediante su API REST (`PUT /api/v1/workflows/{id}`), los payloads son muy estrictos. Enviar objetos anidados adicionales o parámetros faltantes resulta en `400 Bad Request` (ej. `request/body must have required property 'settings'`). **Solución:** Se diseñó `fix_n8n.py` (y un equivalente en PowerShell) para descargar el esquema, inyectar el nodo corregido, y volver a hacer PUT pasando siempre un bloque `"settings": {}` válido.
+- **Interpolación Doble en JSON (SyntaxError):** En el nodo Gemini, al montar un JSON en texto (`{ "text": "={{ 'Mensaje' }}" }`), la doble llave dentro del prompt colisionaba con el motor de expresiones de n8n. **Solución:** Eliminar las interpolaciones anidadas del JSON y concatenar cadenas de texto puro dentro de una única expresión.
+- **Deprecación de Modelos de Gemini:** El nodo fallaba de repente con un `404 Not Found (models/gemini-1.5-flash is not found for API version v1beta)`. **Solución:** Se automatizó una actualización masiva de todos los flujos de n8n hacia el endpoint de `gemini-2.5-flash`. *Nota: En momentos de alta carga (Spikes), Gemini 2.5 Flash devuelve temporalmente `503 Service Unavailable`, lo cual es normal y los flujos en n8n están configurados para reintentar.*
+
 ---
 
 ## 🚀 Plan de Implementación de Novedades (Checklist Pendiente)

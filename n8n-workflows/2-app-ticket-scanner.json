@@ -1,0 +1,179 @@
+{
+  "name": "2. App Scanner (OCR Tickets)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "app-scanner-ticket",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Webhook PocketBase",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "webhookId": "app-scanner-uuid"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.1.11:8090/api/collections/users/auth-with-password",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "identity",
+              "value": "unasev48@gmail.com"
+            },
+            {
+              "name": "password",
+              "value": "uVVcOMgRKfr1Rbj2"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2",
+      "name": "Login PocketBase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [200, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'http://192.168.1.11:8090/api/files/expenses/' + $json.body.record.id + '/' + $json.body.record.receipt }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $node[\"Login PocketBase\"].json.token }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "ticket_image"
+            }
+          }
+        }
+      },
+      "id": "3",
+      "name": "Descargar Ticket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [400, 0]
+    },
+    {
+      "parameters": {
+        "model": "gemini-2.5-flash",
+        "prompt": "Analiza esta foto de un ticket de compra. Extrae lo siguiente en formato JSON (sin markdown, solo llaves):\n- amount: número con decimales de la cantidad total pagada (ej: 45.90)\n- concept: una descripción breve del gasto (ej: Supermercado Mercadona, o Cena en Pizzería)\n- category_id: elige UNO de estos IDs según el tipo de comercio: [mo7ofahojbowkul (Supermercado), 3jfwy3be7egdmp6 (Hogar), ftnun201c70w5zp (Ocio), uhbj70c2yoe086m (Salud), zg8u6sk78sxovdh (Transporte), ik13jysxf9eosaz (Otros)]",
+        "binaryPropertyName": "ticket_image"
+      },
+      "id": "4",
+      "name": "Vision AI (Gemini)",
+      "type": "n8n-nodes-base.googleGemini",
+      "typeVersion": 1,
+      "position": [600, 0],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "gemini-api-id",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'http://192.168.1.11:8090/api/collections/expenses/records/' + $node[\"Webhook PocketBase\"].json.body.record.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $node[\"Login PocketBase\"].json.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "amount",
+              "value": "={{ JSON.parse($node[\"Vision AI (Gemini)\"].json.text).amount }}"
+            },
+            {
+              "name": "concept",
+              "value": "={{ JSON.parse($node[\"Vision AI (Gemini)\"].json.text).concept }}"
+            },
+            {
+              "name": "category_id",
+              "value": "={{ JSON.parse($node[\"Vision AI (Gemini)\"].json.text).category_id }}"
+            },
+            {
+              "name": "status",
+              "value": "COMPLETED"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5",
+      "name": "Actualizar Gasto en PB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [800, 0]
+    }
+  ],
+  "connections": {
+    "Webhook PocketBase": {
+      "main": [
+        [
+          {
+            "node": "Login PocketBase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Login PocketBase": {
+      "main": [
+        [
+          {
+            "node": "Descargar Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar Ticket": {
+      "main": [
+        [
+          {
+            "node": "Vision AI (Gemini)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vision AI (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Gasto en PB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}

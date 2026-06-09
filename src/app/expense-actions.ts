@@ -13,6 +13,7 @@ const expenseSchema = z.object({
   category_id: z.string().optional().nullable(),
   date: z.string().min(1, 'La fecha es obligatoria'),
   is_refundable: z.boolean().optional().default(false),
+  type: z.enum(['EXPENSE', 'INCOME']).default('EXPENSE'),
 })
 
 export async function deleteExpenseAction(
@@ -53,6 +54,7 @@ export async function updateExpenseAction(
     category_id: formData.get('category_id') as string || null,
     date: formData.get('date') as string,
     is_refundable: formData.get('is_refundable') === 'on',
+    type: formData.get('type') as 'EXPENSE' | 'INCOME',
   }
 
   const validatedFields = expenseSchema.safeParse(rawData)
@@ -61,7 +63,7 @@ export async function updateExpenseAction(
     return { error: validatedFields.error.issues[0].message }
   }
 
-  const { amount, concept, category_id, date, is_refundable } = validatedFields.data
+  const { amount, concept, category_id, date, is_refundable, type } = validatedFields.data
 
   try {
     await pb.collection('expenses').update(id, {
@@ -70,6 +72,8 @@ export async function updateExpenseAction(
       category_id: category_id === 'null' ? null : category_id,
       date: new Date(date).toISOString(),
       is_refundable,
+      type,
+      status: 'COMPLETED',
     })
   } catch (error: any) {
     console.error('Error updating expense:', error)

@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { updateExpenseAction, type ActionState } from '@/app/expense-actions'
+import ReceiptScanner from './ReceiptScanner'
 
 const initialState: ActionState = { error: null }
 
@@ -19,6 +20,7 @@ type Expense = {
   created_at: string
   category_id: string | null
   is_refundable?: boolean
+  type?: string
 }
 
 function SubmitButton() {
@@ -49,7 +51,9 @@ export default function EditExpenseForm({
     .split('T')[0]
 
   return (
-    <form action={dispatch} className="flex flex-col gap-6">
+    <form id="edit-expense-form" action={dispatch} className="flex flex-col gap-6">
+      <ReceiptScanner />
+
       <div>
         <label className="block text-sm font-semibold text-zinc-400 mb-2">Cantidad (€)</label>
         <input
@@ -74,6 +78,24 @@ export default function EditExpenseForm({
           placeholder="Ej. Cena en pizzería"
           required
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-zinc-400 mb-2">Tipo de Movimiento</label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="cursor-pointer">
+            <input type="radio" name="type" value="EXPENSE" className="peer sr-only" defaultChecked={expense.type !== 'INCOME'} />
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-center peer-checked:bg-emerald-600/20 peer-checked:border-emerald-500 peer-checked:text-emerald-400 transition-colors font-medium">
+              Gasto (Pago)
+            </div>
+          </label>
+          <label className="cursor-pointer">
+            <input type="radio" name="type" value="INCOME" className="peer sr-only" defaultChecked={expense.type === 'INCOME'} />
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-center peer-checked:bg-emerald-600/20 peer-checked:border-emerald-500 peer-checked:text-emerald-400 transition-colors font-medium">
+              Ingreso (Abono)
+            </div>
+          </label>
+        </div>
       </div>
 
       <div>

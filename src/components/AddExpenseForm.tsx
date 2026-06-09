@@ -16,22 +16,10 @@ interface AddExpenseFormProps {
 
 export default function AddExpenseForm({ categories, message, action }: AddExpenseFormProps) {
   const formRef = useRef<HTMLFormElement>(null)
-  
-  const handleScanComplete = (amount: string, concept?: string) => {
-    if (formRef.current) {
-      const amountInput = formRef.current.elements.namedItem('amount') as HTMLInputElement
-      if (amountInput) amountInput.value = amount
-      
-      if (concept) {
-        const conceptInput = formRef.current.elements.namedItem('concept') as HTMLInputElement
-        if (conceptInput) conceptInput.value = concept
-      }
-    }
-  }
 
   return (
     <form ref={formRef} action={action} className="flex flex-col gap-6">
-      <ReceiptScanner onScanComplete={handleScanComplete} />
+      <ReceiptScanner />
 
       <div>
         <label className="block text-sm font-semibold text-zinc-400 mb-2">Cantidad (€)</label>
@@ -55,6 +43,24 @@ export default function AddExpenseForm({ categories, message, action }: AddExpen
           placeholder="Ej. Cena en pizzería"
           required
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-zinc-400 mb-2">Tipo de Movimiento</label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="cursor-pointer">
+            <input type="radio" name="type" value="EXPENSE" className="peer sr-only" defaultChecked />
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-center peer-checked:bg-emerald-600/20 peer-checked:border-emerald-500 peer-checked:text-emerald-400 transition-colors font-medium">
+              Gasto (Pago)
+            </div>
+          </label>
+          <label className="cursor-pointer">
+            <input type="radio" name="type" value="INCOME" className="peer sr-only" />
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-center peer-checked:bg-emerald-600/20 peer-checked:border-emerald-500 peer-checked:text-emerald-400 transition-colors font-medium">
+              Ingreso (Abono)
+            </div>
+          </label>
+        </div>
       </div>
 
       <div>

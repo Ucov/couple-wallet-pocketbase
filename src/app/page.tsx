@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/pocketbase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { PlusCircle, LogOut, Pencil, ChevronLeft, ChevronRight, Repeat, CheckCircle, UserCog } from 'lucide-react'
+import { PlusCircle, LogOut, Pencil, ChevronLeft, ChevronRight, Repeat, CheckCircle, UserCog, AlertCircle } from 'lucide-react'
 import { logout } from './login/actions'
 import DeleteExpenseButton from '@/components/DeleteExpenseButton'
 import DailyBarChart from '@/components/DailyBarChart'
@@ -38,6 +38,8 @@ interface Expense {
   category_id?: string
   is_refundable?: boolean
   is_transfer?: boolean
+  type?: string
+  status?: string
   categories: Category | Category[] | null
 }
 
@@ -112,6 +114,9 @@ export default async function Dashboard({
     return d >= startOfMonth && d <= endOfMonth
   })
 
+  // Extract pending expenses from all time (or current month) that need review
+  const pendingExpenses = allExpenses.filter((e: any) => e.status === 'MISSING_RECEIPT')
+
   const prevExpenses = allExpenses.filter((e: any) => {
     const d = new Date(e.date)
     return d >= prevMonthStart && d <= prevMonthEnd && !e.is_transfer
@@ -158,6 +163,18 @@ export default async function Dashboard({
       refundableExpenses.push(exp)
       if (exp.paid_by === user.id) myRefundableTotal += amount
       else partnerRefundableTotal += amount
+    } else if (exp.type === 'INCOME') {
+      if (exp.paid_by === user.id) {
+        myNormalTotal -= amount
+        myCumulative -= amount
+      } else {
+        partnerNormalTotal -= amount
+        partnerCumulative -= amount
+      }
+      // Update daily graph with lower cumulative
+      const day = new Date(exp.date).getDate()
+      dailyData[day - 1][myName] = myCumulative
+      dailyData[day - 1][partnerName] = partnerCumulative
     } else {
       if (exp.paid_by === user.id) {
         myNormalTotal += amount
@@ -235,6 +252,9 @@ export default async function Dashboard({
       } else if (exp.is_refundable) {
         if (exp.paid_by === user.id) prevMyRef += amount
         else prevPartRef += amount
+      } else if (exp.type === 'INCOME') {
+        if (exp.paid_by === user.id) prevMyNorm -= amount
+        else prevPartNorm -= amount
       } else {
         if (exp.paid_by === user.id) prevMyNorm += amount
         else prevPartNorm += amount
@@ -258,6 +278,9 @@ export default async function Dashboard({
       } else if (exp.is_refundable) {
         if (exp.paid_by === user.id) myRef += amount
         else partRef += amount
+      } else if (exp.type === 'INCOME') {
+        if (exp.paid_by === user.id) myNorm -= amount
+        else partNorm -= amount
       } else {
         if (exp.paid_by === user.id) myNorm += amount
         else partNorm += amount
@@ -279,6 +302,9 @@ export default async function Dashboard({
       } else if (exp.is_refundable) {
         if (exp.paid_by === user.id) currMyRef += amount
         else currPartRef += amount
+      } else if (exp.type === 'INCOME') {
+        if (exp.paid_by === user.id) currMyNorm -= amount
+        else currPartNorm -= amount
       } else {
         if (exp.paid_by === user.id) currMyNorm += amount
         else currPartNorm += amount
@@ -313,6 +339,10 @@ export default async function Dashboard({
         } else if (exp.is_refundable) {
           if (exp.paid_by === user.id) futureGlobalBalance -= amount
           else futureGlobalBalance += amount
+        } else if (exp.type === 'INCOME') {
+          const myShare = amount * (mySplitPercentage / 100)
+          if (exp.paid_by === user.id) futureGlobalBalance -= (myShare - amount)
+          else futureGlobalBalance -= myShare
         } else {
           const myShare = amount * (mySplitPercentage / 100)
           if (exp.paid_by === user.id) futureGlobalBalance += (myShare - amount)
@@ -389,6 +419,27 @@ export default async function Dashboard({
       <div className="mb-4">
         <MonthNavigator currentMonth={currentMonth} currentYear={currentYear} monthName={monthName} />
       </div>
+
+      {pendingExpenses.length > 0 && (
+        <section className="mb-6 animate-in fade-in slide-in-from-top-4 duration-500">
+          <Link href={`/edit/${pendingExpenses[0].id}`}>
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex items-center justify-between shadow-[0_0_15px_rgba(245,158,11,0.1)] transition-transform active:scale-95">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center">
+                  <AlertCircle size={20} />
+                </div>
+                <div>
+                  <h3 className="text-amber-500 font-bold text-sm">Bandeja de Revisión</h3>
+                  <p className="text-zinc-400 text-xs">
+                    Tienes {pendingExpenses.length} {pendingExpenses.length === 1 ? 'gasto automático' : 'gastos automáticos'} sin ticket o categoría.
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="text-amber-500/50" size={20} />
+            </div>
+          </Link>
+        </section>
+      )}
 
       <section className="mb-6">
         <HeroBalanceCard 
@@ -467,6 +518,7 @@ export default async function Dashboard({
                 categoryIcon={getCategoryIcon(category?.icon, category?.name)}
                 isRefundable={expense.is_refundable}
                 isTransfer={expense.is_transfer}
+                status={expense.status}
               />
             )
           })}
