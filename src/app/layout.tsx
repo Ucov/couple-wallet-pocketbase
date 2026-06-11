@@ -32,7 +32,6 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "CoupleWallet",
   description: "Gestión de finanzas para parejas",
-  applicationName: "CoupleWallet",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -64,6 +63,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-[var(--bg-base)] text-[var(--text-primary)] items-center pb-20">
         <ThemeProvider>
+
           <SwipeNavigation />
           <PageTransition>
             {children}

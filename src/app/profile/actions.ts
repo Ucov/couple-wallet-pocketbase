@@ -69,19 +69,9 @@ export async function generateJoinCode(coupleId: string) {
   const newCode = Math.random().toString(36).substring(2, 8).toUpperCase()
   
   try {
-    const couple = await pb.collection('couples').getOne(coupleId)
-    const coupleName = (couple.name && couple.name.trim() !== '') ? couple.name : 'Pareja de prueba'
-    
-    console.log(">> ACTUALIZANDO PAREJA", coupleId)
-    console.log(">> CON DATOS:", { join_code: newCode, name: coupleName })
-
-    await pb.collection('couples').update(coupleId, { 
-      join_code: newCode,
-      name: coupleName
-    })
+    await pb.collection('couples').update(coupleId, { join_code: newCode })
   } catch (error: any) {
-    console.error(">> ERROR DE POCKETBASE:", error.data || error)
-    return { error: `Error PB: ${JSON.stringify(error.data || error.message)}` }
+    return { error: error.message }
   }
 
   revalidatePath('/profile')

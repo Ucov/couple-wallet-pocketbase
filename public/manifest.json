@@ -1,5 +1,4 @@
 {
-  "id": "/",
   "name": "CoupleWallet",
   "short_name": "CoupleWallet",
   "description": "Gestión de finanzas para parejas",
@@ -20,13 +19,7 @@
       "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ]
 }
