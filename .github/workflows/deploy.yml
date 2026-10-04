@@ -6,7 +6,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ucov/couple-wallet
+  IMAGE_NAME: ucov/couple-wallet-pocketbase
 
 jobs:
   build:
