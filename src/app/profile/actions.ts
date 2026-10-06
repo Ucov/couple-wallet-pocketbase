@@ -83,7 +83,6 @@ export async function generateJoinCode(coupleId: string) {
 export async function updateSplitPercentage(percentage: number) {
   const pb = await getServerPB()
   const user = pb.authStore.model
-  const user = pb.authStore.model
   if (!user) throw new Error('No user')
 
   if (percentage < 0 || percentage > 100) {
@@ -110,4 +109,5 @@ export async function updateSplitPercentage(percentage: number) {
   revalidatePath('/profile')
   return { success: true }
 }
+
 
