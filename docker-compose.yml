@@ -1,6 +1,6 @@
 services:
   couplewallet:
-    build: .
+    image: ghcr.io/ucov/couple-wallet-pocketbase:main
     container_name: couplewallet
     restart: unless-stopped
     ports:
@@ -13,3 +13,4 @@ services:
       - homepage.icon=https://wallet.unailab.top/icon-192x192.png
       - homepage.href=https://wallet.unailab.top
       - homepage.description=Gestión de finanzas en pareja
+
