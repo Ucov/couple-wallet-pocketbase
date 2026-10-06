@@ -78,6 +78,14 @@ export async function addExpense(formData: FormData) {
     }
   }
 
+    let finalSplitPercentage = 50
+  try {
+    const paidByProfile = await pb.collection('users').getFirstListItem(`id="${finalPaidBy}"`)
+    if (paidByProfile && paidByProfile.split_percentage !== undefined) {
+      finalSplitPercentage = paidByProfile.split_percentage
+    }
+  } catch (e) {}
+
   try {
     await pb.collection('expenses').create({
       amount,
@@ -87,6 +95,7 @@ export async function addExpense(formData: FormData) {
       couple_id: profile?.couple_id || null,
       date: new Date(date).toISOString(),
       is_refundable,
+      split_percentage: finalSplitPercentage,
     })
   } catch (error: any) {
     redirect(`/add?message=${encodeURIComponent(error.message)}`)
@@ -124,3 +133,5 @@ export async function addExpense(formData: FormData) {
   revalidatePath('/')
   redirect('/')
 }
+
+

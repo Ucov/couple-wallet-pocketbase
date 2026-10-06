@@ -83,17 +83,25 @@ export async function generateJoinCode(coupleId: string) {
 export async function updateSplitPercentage(percentage: number) {
   const pb = await getServerPB()
   const user = pb.authStore.model
+  const user = pb.authStore.model
   if (!user) throw new Error('No user')
 
   if (percentage < 0 || percentage > 100) {
-    throw new Error('Porcentaje inválido')
+    throw new Error('Porcentaje invalido')
   }
 
   try {
-    // En la migración, la colección de usuarios/perfiles a veces se llama "profiles" o usamos "users"
-    // Probamos primero con profiles si existe
     let profile = await pb.collection('users').getFirstListItem(`id="${user.id}"`)
     await pb.collection('users').update(profile.id, { split_percentage: percentage })
+    
+    if (profile.couple_id) {
+      try {
+        const partner = await pb.collection('users').getFirstListItem(`couple_id="${profile.couple_id}" && id!="${user.id}"`)
+        if (partner) {
+          await pb.collection('users').update(partner.id, { split_percentage: 100 - percentage })
+        }
+      } catch (e) {}
+    }
   } catch (error: any) {
     throw new Error(error.message)
   }
@@ -102,3 +110,4 @@ export async function updateSplitPercentage(percentage: number) {
   revalidatePath('/profile')
   return { success: true }
 }
+
