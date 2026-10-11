@@ -139,7 +139,8 @@ export async function finishShopping(formData: FormData) {
         category_id: categoryId,
         paid_by: user.id,
         couple_id: profile.couple_id,
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
+        source: profile.split_percentage ? `split:${profile.split_percentage}` : 'split:50'
       })
     } catch (expenseError: any) {
       return { error: expenseError.message }

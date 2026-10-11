@@ -231,12 +231,21 @@ export default async function Dashboard({
   let currMonthIsOwed = false
 
   if (userProfile?.couple_id) {
-    const mySplitPercent = userProfile?.split_percentage ?? 50
-    const getMySharePercent = (exp: any) => {
+    const getSplitPercentage = (exp: any): number => {
       if (exp.split_percentage !== undefined && exp.split_percentage !== null) {
-        return exp.paid_by === user.id ? Number(exp.split_percentage) : (100 - Number(exp.split_percentage))
+        const val = Number(exp.split_percentage)
+        if (!isNaN(val)) return val
       }
-      return mySplitPercent
+      if (exp.source && typeof exp.source === 'string' && exp.source.startsWith('split:')) {
+        const val = parseFloat(exp.source.split(':')[1])
+        if (!isNaN(val)) return val
+      }
+      return 50 // Gastos históricos sin porcentaje explícito se mantienen en 50/50
+    }
+
+    const getMySharePercent = (exp: any) => {
+      const split = getSplitPercentage(exp)
+      return exp.paid_by === user.id ? split : (100 - split)
     }
 
     // Calcular balance acumulado HASTA el final del mes anterior (deuda arrastrada)

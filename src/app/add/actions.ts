@@ -96,6 +96,7 @@ export async function addExpense(formData: FormData) {
       date: new Date(date).toISOString(),
       is_refundable,
       split_percentage: finalSplitPercentage,
+      source: `split:${finalSplitPercentage}`,
     })
   } catch (error: any) {
     redirect(`/add?message=${encodeURIComponent(error.message)}`)
