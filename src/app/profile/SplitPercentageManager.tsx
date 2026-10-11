@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Calculator, Check, AlertCircle, Save } from 'lucide-react'
+import { Calculator, Check, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { updateSplitPercentage } from './actions'
 
@@ -16,6 +16,10 @@ export default function SplitPercentageManager({ initialPercentage }: Props) {
   const [showCalculator, setShowCalculator] = useState(false)
   const [mySalary, setMySalary] = useState('')
   const [partnerSalary, setPartnerSalary] = useState('')
+
+  useEffect(() => {
+    setPercentage(initialPercentage)
+  }, [initialPercentage])
 
   const handleSave = (newPercentage: number) => {
     startTransition(async () => {
@@ -33,22 +37,22 @@ export default function SplitPercentageManager({ initialPercentage }: Props) {
     setPercentage(Number(e.target.value))
   }
 
-  const handleSliderCommit = (e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement>) => {
-    handleSave(Number(e.currentTarget.value))
+  const handleSliderCommit = () => {
+    handleSave(percentage)
   }
 
   const handleCalculate = (e: React.FormEvent) => {
     e.preventDefault()
-    const mine = parseFloat(mySalary)
-    const theirs = parseFloat(partnerSalary)
+    const mine = parseFloat(mySalary.replace(',', '.'))
+    const theirs = parseFloat(partnerSalary.replace(',', '.'))
     
     if (isNaN(mine) || isNaN(theirs) || mine <= 0 || theirs <= 0) {
-      toast.error('Por favor, introduce salarios válidos')
+      toast.error('Por favor, introduce salarios válidos mayores a 0')
       return
     }
 
     const total = mine + theirs
-    // Si mi salario es el doble que el suyo, yo asumo el doble de gastos
+    // Proporción matemática exacta según ingresos netos
     const newMyPercentage = Math.round((mine / total) * 100)
     
     setPercentage(newMyPercentage)
@@ -66,6 +70,7 @@ export default function SplitPercentageManager({ initialPercentage }: Props) {
           <p className="text-zinc-500 text-xs">Por defecto es 50% / 50%</p>
         </div>
         <button
+          type="button"
           onClick={() => setShowCalculator(!showCalculator)}
           className="bg-emerald-500/10 text-emerald-400 p-2 rounded-lg hover:bg-emerald-500/20 transition-colors flex items-center gap-2 text-sm font-medium"
         >
@@ -85,14 +90,15 @@ export default function SplitPercentageManager({ initialPercentage }: Props) {
             <form onSubmit={handleCalculate} className="bg-zinc-900 p-4 rounded-lg border border-zinc-800 flex flex-col gap-3">
               <p className="text-xs text-zinc-400 mb-1">
                 <AlertCircle className="w-3 h-3 inline mr-1 -mt-0.5" />
-                No guardaremos tus sueldos, solo calcularemos la proporción exacta.
+                No guardaremos tus sueldos, solo calcularemos la proporción exacta según vuestros ingresos netos.
               </p>
               <div className="flex gap-3">
                 <div className="flex-1">
                   <label className="text-xs text-zinc-500 mb-1 block">Tu sueldo neto</label>
                   <div className="relative">
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       required
                       value={mySalary}
                       onChange={(e) => setMySalary(e.target.value)}
@@ -106,7 +112,8 @@ export default function SplitPercentageManager({ initialPercentage }: Props) {
                   <label className="text-xs text-zinc-500 mb-1 block">Sueldo de tu pareja</label>
                   <div className="relative">
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       required
                       value={partnerSalary}
                       onChange={(e) => setPartnerSalary(e.target.value)}
@@ -151,12 +158,12 @@ export default function SplitPercentageManager({ initialPercentage }: Props) {
           onMouseUp={handleSliderCommit}
           onTouchEnd={handleSliderCommit}
           disabled={isPending}
-          className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer disabled:opacity-50
+          className="w-full h-2.5 rounded-lg appearance-none cursor-pointer disabled:opacity-50
             [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 
             [&::-webkit-slider-thumb]:bg-emerald-500 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-grab
             [&::-webkit-slider-thumb]:active:cursor-grabbing [&::-webkit-slider-thumb]:active:scale-110 [&::-webkit-slider-thumb]:transition-transform"
           style={{
-            background: `linear-gradient(to right, #34d399 ${percentage}%, #27272a ${percentage}%)`
+            background: `linear-gradient(to right, #10b981 ${percentage}%, #3b82f6 ${percentage}%)`
           }}
         />
         {isPending && <p className="text-center text-xs text-emerald-500 mt-2 animate-pulse">Guardando ajuste...</p>}

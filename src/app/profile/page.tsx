@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { getServerPB } from '@/lib/pocketbase-server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
@@ -15,27 +15,23 @@ import SplitPercentageManager from './SplitPercentageManager'
 export const dynamic = 'force-dynamic'
 
 export default async function ProfilePage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const pb = await getServerPB()
+  const user = pb.authStore.model
   if (!user) {
     redirect('/login')
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('name, couple_id, split_percentage')
-    .eq('id', user.id)
-    .single()
+  let profile: any = null
+  try {
+    profile = await pb.collection('users').getFirstListItem(`id="${user.id}"`)
+  } catch (e) {}
 
-    
-  let joinCode = null;
+  let joinCode = null
   if (profile?.couple_id) {
-    const { data: couple } = await supabase
-      .from('couples')
-      .select('join_code')
-      .eq('id', profile.couple_id)
-      .single()
-    joinCode = couple?.join_code
+    try {
+      const couple = await pb.collection('couples').getFirstListItem(`id="${profile.couple_id}"`)
+      joinCode = couple?.join_code
+    } catch (e) {}
   }
 
   return (
@@ -65,7 +61,6 @@ export default async function ProfilePage() {
       )}
 
       {profile?.couple_id && (
-
         <PushNotificationsClient coupleId={profile.couple_id} />
       )}
 
