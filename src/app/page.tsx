@@ -231,6 +231,14 @@ export default async function Dashboard({
   let currMonthIsOwed = false
 
   if (userProfile?.couple_id) {
+    const mySplitPercent = userProfile?.split_percentage ?? 50
+    const getMySharePercent = (exp: any) => {
+      if (exp.split_percentage !== undefined && exp.split_percentage !== null) {
+        return exp.paid_by === user.id ? Number(exp.split_percentage) : (100 - Number(exp.split_percentage))
+      }
+      return mySplitPercent
+    }
+
     // Calcular balance acumulado HASTA el final del mes anterior (deuda arrastrada)
     const prevAccumExpenses = (allExpenses || []).filter((e: any) => new Date(e.date) < startOfMonth)
     let prevMyBalance = 0
@@ -244,7 +252,7 @@ export default async function Dashboard({
         if (exp.paid_by === user.id) prevMyBalance -= amount
         else prevMyBalance += amount
       } else {
-        const mySharePercent = exp.paid_by === user.id ? (exp.split_percentage ?? 50) : (100 - (exp.split_percentage ?? 50))
+        const mySharePercent = getMySharePercent(exp)
         const myShare = amount * (mySharePercent / 100)
         const myPaid = exp.paid_by === user.id ? amount : 0
         prevMyBalance += (myShare - myPaid)
@@ -266,7 +274,7 @@ export default async function Dashboard({
         if (exp.paid_by === user.id) myBalance -= amount
         else myBalance += amount
       } else {
-        const mySharePercent = exp.paid_by === user.id ? (exp.split_percentage ?? 50) : (100 - (exp.split_percentage ?? 50))
+        const mySharePercent = getMySharePercent(exp)
         const myShare = amount * (mySharePercent / 100)
         const myPaid = exp.paid_by === user.id ? amount : 0
         myBalance += (myShare - myPaid)
@@ -286,7 +294,7 @@ export default async function Dashboard({
         if (exp.paid_by === user.id) currMyBalance -= amount
         else currMyBalance += amount
       } else {
-        const mySharePercent = exp.paid_by === user.id ? (exp.split_percentage ?? 50) : (100 - (exp.split_percentage ?? 50))
+        const mySharePercent = getMySharePercent(exp)
         const myShare = amount * (mySharePercent / 100)
         const myPaid = exp.paid_by === user.id ? amount : 0
         currMyBalance += (myShare - myPaid)
@@ -315,7 +323,7 @@ export default async function Dashboard({
           if (exp.paid_by === user.id) futureGlobalBalance -= amount
           else futureGlobalBalance += amount
         } else {
-          const mySharePercent = exp.paid_by === user.id ? (exp.split_percentage ?? 50) : (100 - (exp.split_percentage ?? 50))
+          const mySharePercent = getMySharePercent(exp)
           const myShare = amount * (mySharePercent / 100)
           const myPaid = exp.paid_by === user.id ? amount : 0
           futureGlobalBalance += (myShare - myPaid)
